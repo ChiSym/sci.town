@@ -1,5 +1,0 @@
-{:paths ["src"]
- :deps {org.clojure/clojure {:mvn/version "1.10.0"}
-        org.clojure/clojurescript {:mvn/version "1.10.520"}
-        applied-science/js-interop {:mvn/version "0.3.2"}
-        com.lucasbradstreet/cljs-uuid-utils {:mvn/version "1.0.2"}}}

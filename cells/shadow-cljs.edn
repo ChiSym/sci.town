@@ -1,6 +1,0 @@
-{:deps   {:aliases [:test]}
- :paths  ["src"]
- :builds {:test {:target   :browser-test
-                 :test-dir "compiled/tests"
-                 :devtools {:http-port 8021
-                            :http-root "compiled/tests"}}}}

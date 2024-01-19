@@ -2,13 +2,11 @@
 *.iml
 pom.xml**
 .idea
-.planck_cache
 opts.clj
 *.DS_Store
 node_modules
 **/cljs-runtime
 **/compiled**
-**/bootstrap
 **/.firebaserc
 **/.cpcache/**
 **.shadow-cljs

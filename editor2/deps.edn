@@ -20,6 +20,13 @@
         maria/tools {:local/root "../tools"}
         maria/shapes {:local/root "../shapes"}
         maria/friendly {:local/root "../friendly"}
+                      :git/sha "19d772cd692b8f5ae4bba6c9b306aed776740343"
+        maria/tools {:git/url "https://github.com/mhuebert/maria"
+                     :git/sha "19d772cd692b8f5ae4bba6c9b306aed776740343"
+                     :deps/root "tools"}
+        maria/shapes {:git/url "https://github.com/mhuebert/maria"
+                      :git/sha "19d772cd692b8f5ae4bba6c9b306aed776740343"
+                      :deps/root "shapes"}
 
         io.github.applied-science/shapes {:git/sha "da44031cf79a649932cb502f17388db23f2b8ace"}
         io.github.mhuebert/re-db {:git/sha "066439e228ae4a48383055970af74b2600b48050"}
