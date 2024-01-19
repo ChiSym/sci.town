@@ -1,0 +1,343 @@
+@import url("../node_modules/prosemirror-view/style/prosemirror.css"); /*@import url("./nextjournal.viewer.css");*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --code-number: #5999ec;
+    --code-string: #c47a10;
+    --code-docString: #a78938;
+    --code-variableName: #63945c;
+    --code-regexp: #a78938;
+    --code-null: #888;
+    --code-keyword: #8e649c;
+    --code-comment: #a3685a;
+    --code-operator: #117301;
+    --code-bool: #987aa0;
+    --code-brackets: #9f9f9f;
+}
+@layer base {
+    .prose code::before, .prose code::after {
+        content: none;
+    }
+    a {
+        @apply underline text-blue-600 hover:text-blue-800 visited:text-purple-700
+    }
+}
+@layer components {
+
+}
+@layer utilities {
+
+    ::placeholder, .placeholder {
+        @apply text-black/50
+    }
+    .gap-list {
+        @apply gap-[6px]
+    }
+    .rotate-4s {
+        animation: rotation 4s infinite linear;
+    }
+
+    .rotate-3s {
+        animation: rotation 3s infinite linear;
+    }
+
+    .rotate-2s {
+        animation: rotation 2s infinite linear;
+    }
+}
+
+/* ProseMirror */
+
+.ProseMirror {
+    @apply p-0 text-xl font-serif;
+}
+
+.ProseMirror:focus {
+    outline: none;
+}
+
+.ProseMirror ul, .ProseMirror ol, .ProseMirror p, .ProseMirror blockquote .ProseMirror pre {
+    @apply mt-4;
+}
+
+.ProseMirror ul, .ProseMirror ol {
+    @apply ml-5;
+}
+
+.ProseMirror code, .prose code {
+    @apply bg-black/5 py-[2px] px-[2px];
+}
+
+.ProseMirror li {
+    @apply list-disc;
+}
+
+
+.ProseMirror > *:not(.NodeView) {
+    @apply md:w-1/2 leading-relaxed pl-4;
+
+}
+
+.ProseMirror hr {
+    @apply border-gray-300 my-8
+}
+
+.ProseMirror.hide-all-prose > *:not(.NodeView) {
+    @apply hidden;
+}
+
+/* General Formatting */
+
+svg {
+    display: inline-block;
+}
+
+h1, h2, h3, h4, h5 {
+    @apply mt-6;
+}
+
+p code {
+    font-size: 1.1rem;
+    line-height: 1.5rem;
+}
+h1 {
+    @apply text-4xl;
+}
+
+h2 {
+    @apply text-[1.6rem];
+}
+
+h3 {
+    @apply font-bold;
+}
+
+h4 {
+    @apply font-bold  text-base;
+}
+
+h5 {
+    @apply font-bold text-sm uppercase;
+}
+
+.font-serif {
+    font-family: georgia, times, serif;
+    @apply font-normal;
+}
+
+/* Cells */
+.cell-status {
+    display: inline-block;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    margin: 1px;
+    padding: 4px;
+    background-color: rgba(0, 0, 0, .05)
+}
+
+.circle-error, .circle-loading, .circle-value {
+    width: 16px;
+    height: 16px;
+    position: relative;
+    display: inline-block
+}
+
+.circle-error > div, .circle-loading > div, .circle-value > div {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: absolute;
+    top: 0;
+    left: 0
+}
+
+.circle-loading > div {
+    opacity: .6;
+    -webkit-animation: sk-bounce 3s infinite ease-in-out;
+    animation: sk-bounce 3s infinite ease-in-out;
+    background-color: #357edd
+}
+
+.circle-loading > div:nth-child(2) {
+    -webkit-animation-delay: -1s;
+    animation-delay: -1s
+}
+
+@-webkit-keyframes sk-bounce {
+    0%, to {
+        -webkit-transform: scale(0)
+    }
+    50% {
+        -webkit-transform: scale(1)
+    }
+}
+
+@keyframes sk-bounce {
+    0%, to {
+        transform: scale(0);
+        -webkit-transform: scale(0)
+    }
+    50% {
+        transform: scale(1);
+        -webkit-transform: scale(1)
+    }
+}
+
+.circle-error > div {
+    background-color: darkred;
+    border-radius: 0;
+    -webkit-transform: rotate(45deg) scale(.75);
+    transform: rotate(45deg) scale(.75)
+}
+
+.circle-value > div {
+    background-color: deepskyblue;
+    border-radius: 0;
+    transform: rotate(45deg) scale(.75)
+}
+
+.interpose-comma > *:not(:last-child)::after {
+    content: ", ";
+    align-self: end;
+}
+
+
+
+/* Radix UI */
+
+
+/* reset */
+button {
+    all: unset;
+}
+
+.MenubarRoot {
+    display: flex;
+    background-color: white;
+    padding: 3px;
+    border-radius: 6px;
+}
+
+.MenubarTrigger {
+    padding: 8px 12px;
+    outline: none;
+    user-select: none;
+    font-weight: 500;
+    line-height: 1;
+    border-radius: 4px;
+    color: var(--violet11);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2px;
+    cursor: pointer;
+}
+
+.MenubarTrigger[data-highlighted],
+.MenubarTrigger[data-state='open'] {
+    background-color: var(--violet4);
+}
+
+.MenubarContent,
+.MenubarSubContent {
+    @apply shadow rounded bg-white z-20 p-[2px];
+    min-width: 220px;
+    animation-duration: 400ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
+}
+
+.MenubarItem,
+.MenubarSubTrigger,
+.MenubarCheckboxItem,
+.MenubarRadioItem {
+    all: unset;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--violet11);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    height: 25px;
+    position: relative;
+    user-select: none;
+}
+
+.MenubarItem.inset,
+.MenubarSubTrigger.inset,
+.MenubarCheckboxItem.inset,
+.MenubarRadioItem.inset {
+    padding-left: 20px;
+}
+
+.MenubarItem[data-state='open'],
+.MenubarSubTrigger[data-state='open'] {
+    background-color: var(--violet4);
+    color: var(--violet11);
+}
+
+.MenubarItem[data-highlighted],
+.MenubarSubTrigger[data-highlighted],
+.MenubarCheckboxItem[data-highlighted],
+.MenubarRadioItem[data-highlighted] {
+    background-image: linear-gradient(135deg, var(--violet9) 0%, var(--violet10) 100%);
+    color: var(--violet1);
+}
+
+.MenubarItem[data-disabled],
+.MenubarSubTrigger[data-disabled],
+.MenubarCheckboxItem[data-disabled],
+.MenubarRadioItem[data-disabled] {
+    color: var(--mauve8);
+    pointer-events: none;
+}
+
+.MenubarItemIndicator {
+    position: absolute;
+    left: 0;
+    width: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.MenubarSeparator {
+    height: 1px;
+    background-color: var(--violet6);
+    margin: 5px;
+}
+
+/* radix-ui accordion */
+.AccordionChevron {
+    transition: transform 300ms;
+}
+
+.AccordionTrigger[data-state='open'] > .AccordionChevron {
+    transform: rotate(90deg);
+}
+
+.bg-selection {
+    @apply bg-black/10 py-[0.3rem];
+}
+
+.text-menu-muted {
+    @apply text-black/40
+}
+
+*[data-highlighted] .text-menu-muted, .text-menu-muted[data-highlighted], *[data-selected] .text-menu-muted, .text-menu-muted[data-selected] {
+    color: inherit;
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+

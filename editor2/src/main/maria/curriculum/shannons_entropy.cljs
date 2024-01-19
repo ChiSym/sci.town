@@ -1,4 +1,5 @@
-(ns maria.curriculum.shannons-entropy)
+(ns maria.curriculum.shannons-entropy
+  {:author "Dave Liepmann"})
 
 ;; # Shannon's entropy calculation
 

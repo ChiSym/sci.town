@@ -1,5 +1,6 @@
 (ns maria.curriculum.welcome-to-cells
-  "Learn how to make things come alive and change over time."
+  {:doc "Learn how to make things come alive and change over time."
+   :author "Dave Liepmann"}
   (:require [cells.core :refer :all]
             [shapes.core :refer :all]))
 

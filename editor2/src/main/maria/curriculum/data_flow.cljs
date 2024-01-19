@@ -1,4 +1,6 @@
 (ns maria.curriculum.data-flow
+  {:doc "Data flow exercise using eBird, WikiData and cells"
+   :author "Dave Liepmann"}
   (:require [cells.core :as cell :refer [defcell cell]]
             [shapes.core :refer :all]))
 

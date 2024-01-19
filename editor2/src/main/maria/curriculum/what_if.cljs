@@ -1,5 +1,6 @@
 (ns maria.curriculum.what-if
-  "The if statement explained."
+  {:doc "The if statement explained."
+   :author "Dave Liepmann"}
   (:require [shapes.core :refer :all]
             [maria.editor.code.repl :refer :all]))
 

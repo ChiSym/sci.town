@@ -1,5 +1,6 @@
 (ns maria.curriculum.animation-quickstart
-  "Get a running start at making basic animations using the Shapes library."
+  {:doc "Get a running start at making basic animations using the Shapes library."
+   :author "Dave Liepmann"}
   (:require [cells.core :refer :all]
             [shapes.core :refer :all]))
 
