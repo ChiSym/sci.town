@@ -1,8 +1,7 @@
 {
-  "name": "maria-editor-2",
+  "name": "sci.town",
   "version": "0.0.0",
-  "repository": "https://www.github.com/mhuebert/maria",
-  "author": "Matthew Huebert",
+  "repository": "https://www.github.com/probcomp/sci.town",
   "license": "EPL-2.0",
   "dependencies": {
     "@codemirror/autocomplete": "^6.7.1",

@@ -1,13 +1,15 @@
-(ns maria.cloud.build
+(ns build
   (:require [babashka.fs :as fs]
             [babashka.process :as bp]
+            [cljs-static.assets :as assets]
             [cljs-static.page :as page]
             [cljs-static.shadow :as shadow]
-            [cljs-static.assets :as assets]
+            [clojure.java.browse :as browse]
             [clojure.string :as str]
             [edamame.core :as eda]
+            [maria.editor.util :as u]
             [re-db.schema :as schema]
-            [maria.editor.util :as u]))
+            [shadow.cljs.devtools.api :as shadow.api]))
 
 (defn parse-meta [file]
   (let [src (slurp file)
@@ -45,11 +47,12 @@
             :file/url (str "/curriculum/" file-name "?v=" hash)
             :file/provider :file.provider/curriculum})
         (fs/list-dir (fs/file "src/main/maria/curriculum"))))
+(read-curriculum-namespaces)
 
 (defn index-html []
   (page/root "Maria"
              {:meta {:viewport "width=device-width, initial-scale=1"}
-              :styles [{:href (assets/path "/maria.cloud.css")}]
+              :styles [{:href (assets/path "/editor.css")}]
               :scripts/head [{:src "https://polyfill.io/v3/polyfill.min.js?version=3.111.0&features=URLSearchParams%2CURL"}]
               :props/html {:class "bg-neutral-100"}
               :body [:div#maria-live]
@@ -68,14 +71,28 @@
   {:shadow.build/stage :flush}
   [state]
   (defonce _tailwind (bp/process
-                       {:in :inherit
-                        :out :inherit
-                        :err :inherit
-                        :shutdown bp/destroy-tree}
-                       "npx tailwindcss -w -i src/maria.cloud.css -o public/maria.cloud.css"))
+                      {:in :inherit
+                       :out :inherit
+                       :err :inherit
+                       :shutdown bp/destroy-tree}
+                      "npx tailwindcss -w -i src/editor.css -o public/editor.css"))
   state)
 
 (defn copy-curriculum! {:shadow.build/stage :flush}
   [state]
   (bp/sh "bb" "copy-curriculum")
   state)
+
+(defn watch
+  {:shadow/requires-server true}
+  [& args]
+  (shadow.api/watch :editor))
+
+(defonce browse-url (memoize browse/browse-url))
+
+(defn browse!
+  {:shadow.build/stage :flush}
+  [build-state]
+  (when-let [port (-> build-state :devtools :http-port)]
+    (browse-url (str "http://localhost:" port)))
+  build-state)

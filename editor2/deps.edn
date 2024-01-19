@@ -17,10 +17,6 @@
         bidi/bidi {:git/url "https://github.com/mhuebert/bidi"
                    :git/sha "21afb221b7e290e4a1d0a4aff4cf2a02fdb7f151"}
 
-        maria/tools {:local/root "../tools"}
-        maria/shapes {:local/root "../shapes"}
-        maria/friendly {:local/root "../friendly"}
-                      :git/sha "19d772cd692b8f5ae4bba6c9b306aed776740343"
         maria/tools {:git/url "https://github.com/mhuebert/maria"
                      :git/sha "19d772cd692b8f5ae4bba6c9b306aed776740343"
                      :deps/root "tools"}
@@ -51,4 +47,5 @@
                        #_#_applied-science/js-interop {:local/root "../../js-interop"}
                        #_#_nextjournal/clojure-mode {:local/root "../../clojure-mode"}
                        #_#_io.github.mhuebert/yawn {:local/root "../../yawn"}
-                       #_#_io.github.mhuebert/re-db {:local/root "../../re-db"}}}}}
+                       #_#_io.github.mhuebert/re-db {:local/root "../../re-db"}}}
+  :build {:extra-paths ["dev"]}}}
