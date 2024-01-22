@@ -101,8 +101,7 @@
       :on-click #(do (js/console.error error)
                      (some-> (sci/stacktrace error) seq pprint))} (icons/command-line:mini "w-5 h-5")]]
    (when-let [data (ex-data error)]
-     (show opts data)
-     )
+     (show opts data))
    #_[:pre (ui/pprinted (ex-data error))]
    (when-let [stack (seq (sci/stacktrace error))]
      [:div.p-2
@@ -114,7 +113,6 @@
   [opts x]
   (assert (:sci/context opts))
   (assert (:sci/get-ns opts))
-  (prn :show (type x))
   (let [opts
         (-> opts
             (update :depth (fnil inc -1))
@@ -202,9 +200,11 @@
      !parent]))
 
 (defview show-coll [left right opts coll]
-  (let [coll (sort (fn [a b]
-                     (try (compare a b) (catch js/Error e -1)))
-                   coll)
+  (let [coll (if (:sort-colls? opts true)
+               (sort (fn [a b]
+                       (try (compare a b) (catch js/Error e -1)))
+                     coll)
+               coll)
         [coll more! !wrapper !parent] (use-limit coll 10)]
     [show-brackets
      left
@@ -231,17 +231,19 @@
 (defview show-promise [opts p]
   (let [[v v!] (h/use-state ::loading)]
     (h/use-effect
-     (fn []
-       (v! ::loading)
-       (-> p
-           (p/then v!)
-           (p/catch (fn [e] (v! e) (throw e))))
-       nil)
-     [p])
+      (fn []
+        (v! ::loading)
+        (-> p
+            (p/then v!)
+            ;; if promise throws, catch it for display purposes but re-throw
+            ;; as the view layer should not modify behaviour
+            (p/catch (fn [e] (v! e) (throw e))))
+        nil)
+      [p])
     (v/x
-     (if (= v ::loading)
-       loader
-       (show opts v)))))
+      (if (= v ::loading)
+        loader
+        (show opts v)))))
 
 (let [show-katex-loadable (lazy/loadable maria.editor.extensions.katex/show-katex)]
   (defn show-katex [opts x]
@@ -335,102 +337,101 @@
 (def builtin-viewers
   "Ordered list of viewers functions"
   (flatten (list
-            (fn [_ x]
-              (when (= x ::loading)
-                loader))
+             (fn [_ x]
+               (when (= x ::loading)
+                 loader))
 
 
-            (handles-keys #{:maria/cells}
-                          (fn [opts x]
-                            (when (cells/cell? x)
-                              (show-cell opts x))))
+             (handles-keys #{:maria/cells}
+               (fn [opts x]
+                 (when (cells/cell? x)
+                   (show-cell opts x))))
 
-            (handles-keys #{:react-element}
-                          ;; show react elements directly
-                          (fn [opts x]
-                            (when (react/isValidElement x)
-                              x)))
+             (handles-keys #{:react-element}
+               ;; show react elements directly
+               (fn [opts x]
+                 (when (react/isValidElement x)
+                   x)))
 
-            (handles-keys #{:TeX}
-                          ;; THIS IS TEMPORARY FOR TESTING
-                          (fn [opts x]
-                            (when-let [s (:TeX (meta x))]
-                              (show-katex opts s))))
+             (handles-keys #{:TeX}
+               ;; THIS IS TEMPORARY FOR TESTING
+               (fn [opts x]
+                 (when-let [s (:TeX (meta x))]
+                   (show-katex opts s))))
 
-            (handles-keys #{:map-entry}
-                          (fn [opts x]
-                            (when (map-entry? x)
-                              (show-map-entry opts x))))
+             (handles-keys #{:hiccup}
+               (fn [opts x]
+                 (when (and (instance? PersistentVector x)
+                            (keyword? (first x))
+                            ;; provides ^:vector [] as an escape-hatch
+                            ;; to prevent hiccup rendering. otherwise, treat
+                            ;; any vector whose first child is a keyword as hiccup.
+                            ;; (useful for demos, unsure if we should keep this behaviour)
+                            (not (:vector (meta x))))
+                   (v/x x))))
 
-            (handles-keys #{:hiccup}
-                          (fn [opts x]
-                            (when (and (instance? PersistentVector x)
-                                       (keyword? (first x))
-                                       (not (:vector (meta x))))
-                              (v/x x))))
+             (handles-keys #{:number
+                             :symbol
+                             :var
+                             :keyword
+                             :map-entry
+                             :string
+                             :boolean
+                             :map
+                             :function
+                             :promise
+                             :namespace
+                             :vector
+                             :set
+                             :list
+                             :error}
+               (by-type {js/Number (show-inline "text-number")
+                         Symbol (show-inline "text-variableName" str)
+                         js/String show-str
+                         js/Boolean (show-inline "text-bool" pr-str)
+                         Keyword (show-inline "text-keyword" str)
+                         MapEntry show-map-entry
+                         Var show-var
+                         sci.lang/Var show-var
+                         js/Function show-function
+                         MetaFn show-function
+                         js/Promise show-promise
+                         PersistentArrayMap show-map
+                         PersistentHashMap show-map
+                         TransientHashMap show-map
+                         PersistentTreeSet show-set
+                         PersistentHashSet show-set
+                         List show-list
+                         LazySeq show-list
+                         shapes/Shape show-shape
+                         sci.lang/Namespace show-ns
+                         APersistentVector show-vector
+                         PersistentVector show-vector
+                         Subvec show-vector
+                         RedNode show-vector
+                         js/Error show-error
+                         ExceptionInfo show-error
+                         }))
 
-            (handles-keys #{:number
-                            :symbol
-                            :var
-                            :keyword
-                            :map-entry
-                            :string
-                            :boolean
-                            :map
-                            :function
-                            :promise
-                            :namespace
-                            :vector
-                            :set
-                            :list
-                            :error}
-                          (by-type {js/Number (show-inline "text-number")
-                                    Symbol (show-inline "text-variableName" str)
-                                    js/String show-str
-                                    js/Boolean (show-inline "text-bool" pr-str)
-                                    Keyword (show-inline "text-keyword" str)
-                                    MapEntry show-map-entry
-                                    Var show-var
-                                    sci.lang/Var show-var
-                                    js/Function show-function
-                                    MetaFn show-function
-                                    js/Promise show-promise
-                                    PersistentArrayMap show-map
-                                    PersistentHashMap show-map
-                                    TransientHashMap show-map
-                                    PersistentTreeSet show-set
-                                    PersistentHashSet show-set
-                                    List show-list
-                                    LazySeq show-list
-                                    shapes/Shape show-shape
-                                    sci.lang/Namespace show-ns
-                                    APersistentVector show-vector
-                                    PersistentVector show-vector
-                                    Subvec show-vector
-                                    RedNode show-vector
-                                    js/Error show-error
-                                    ExceptionInfo show-error
-                                    }))
+             (handles-keys #{:error}
+               (fn [opts x]
+                 (when (instance? js/Error x)
+                   (show-error opts x))))
+             (handles-keys #{:function}
+               (fn [opts x]
+                 (when (fn? x)
+                   (show-function opts x))))
 
-            (handles-keys #{:error}
-                          (fn [opts x]
-                            (when (instance? js/Error x)
-                              (show-error opts x))))
-            (handles-keys #{:function}
-                          (fn [opts x]
-                            (when (fn? x)
-                              (show-function opts x))))
-
-            (handles-keys #{:cljs.core/IWatchable}
-                          (fn [opts x] (when (satisfies? IWatchable x)
-                                         (show-watchable opts x))))
-            (handles-keys #{:seq}
-                          (fn [opts x] (when (seq? x) (show-list opts x))))
-            (handles-keys #{:nil}
-                          (fn [opts x] (when (nil? x) (punctuate "nil"))))
-            (handles-keys #{:object}
-                          (fn [opts x] (when (object? x) (show-map opts (js->clj x :keywordize-keys true)))))
-            #_(fn [x] (clerk.sci-viewer/inspect x)))))
+             (handles-keys #{:cljs.core/IWatchable}
+               (fn [opts x] (when (satisfies? IWatchable x)
+                              (show-watchable opts x))))
+             (handles-keys #{:seq}
+               (fn [opts x] (when (seq? x) (show-list opts x))))
+             (handles-keys #{:nil}
+               (fn [opts x] (when (nil? x) (punctuate "nil"))))
+             (handles-keys #{:object}
+               (fn [opts x] (when (object? x) (show-map opts (js->clj x :keywordize-keys true)))))
+             #_(fn [x] (clerk.sci-viewer/inspect x)))))
 
 (defn add-viewers
   [ctx key viewers]
@@ -481,55 +482,56 @@
 
 (comment
 
- (for [where [:before :after]]
-   (insert where
-           (comp :foo ::keys meta)
-           [nil
-            nil
-            (handles-keys #{:foo} (fn []))
-            nil
-            (handles-keys #{:foo} (fn []))]
-           [:X]))
+  (for [where [:before :after]]
+    (insert where
+            (comp :foo ::keys meta)
+            [nil
+             nil
+             (handles-keys #{:foo} (fn []))
+             nil
+             (handles-keys #{:foo} (fn []))]
+            [:X]))
 
- (= [2 4] ((juxt first-index last-index) :foo [#{:bar}
-                                               #{:bar}
-                                               #{:foo}
-                                               #{:bar}
-                                               #{:foo}
-                                               #{:bar}]))
+  (= [2 4] ((juxt first-index last-index) :foo [#{:bar}
+                                                #{:bar}
+                                                #{:foo}
+                                                #{:bar}
+                                                #{:foo}
+                                                #{:bar}]))
 
- (= [0 0]
-    ;; not-found
-    ((juxt first-index last-index) :foo [#{:bar}]))
+  (= [0 0]
+     ;; not-found
+     ((juxt first-index last-index) :foo [#{:bar}]))
 
- (= [0 0]
-    ;; first entry
-    ((juxt first-index last-index) :foo [#{:foo}]))
+  (= [0 0]
+     ;; first entry
+     ((juxt first-index last-index) :foo [#{:foo}]))
 
- (= [1 1]
-    ;; midpoint
-    ((juxt first-index last-index) :foo [#{:bar} #{:foo} #{:bar}]))
+  (= [1 1]
+     ;; midpoint
+     ((juxt first-index last-index) :foo [#{:bar} #{:foo} #{:bar}]))
 
- (= [2 2]
-    ;; does not matter how many are trailing
-    ((juxt first-index last-index) :foo [#{:bar} #{:bar}
-                                         #{:foo}
-                                         #{:bar} #{:bar}])
-    ((juxt first-index last-index) :foo [#{:bar} #{:bar}
-                                         #{:foo}])
-    ((juxt first-index last-index) :foo [#{:bar} #{:bar}
-                                         #{:foo}
-                                         #{:bar} #{:bar} #{:bar}]))
- (= [2 5]
-    ;; selects last occurrence
-    ((juxt first-index last-index) :foo [#{:bar} #{:bar}
-                                         #{:foo}
-                                         #{:bar} #{:bar}
-                                         #{:foo}])))
+  (= [2 2]
+     ;; does not matter how many are trailing
+     ((juxt first-index last-index) :foo [#{:bar} #{:bar}
+                                          #{:foo}
+                                          #{:bar} #{:bar}])
+     ((juxt first-index last-index) :foo [#{:bar} #{:bar}
+                                          #{:foo}])
+     ((juxt first-index last-index) :foo [#{:bar} #{:bar}
+                                          #{:foo}
+                                          #{:bar} #{:bar} #{:bar}]))
+  (= [2 5]
+     ;; selects last occurrence
+     ((juxt first-index last-index) :foo [#{:bar} #{:bar}
+                                          #{:foo}
+                                          #{:bar} #{:bar}
+                                          #{:foo}])))
 
 
 (def ^:export extra-tailwind-classes
-  ;; placeholder to put tailwind classes which should be available
+  ;; placeholder to put tailwind classes which should be available after minification/compile step.
+  ;; check if there is a better way to do this
   ["text-xs text-sm text-lg text-xl text-2xl text-3xl text-4xl text-5xl text-6xl text-7xl text-8xl"
    "flex-wrap gap-1 gap-2 gap-3 gap-4 gap-5 gap-6 gap-7 gap-8"
    "bg-black"
