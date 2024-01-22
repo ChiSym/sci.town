@@ -44,15 +44,8 @@
           (when (:bindings cmd)
             [shortcut (keymaps/show-binding (first (:bindings cmd)))])])))
 
-(def trigger-classes (v/classes ["px-1 h-7 bg-transparent rounded"
-                                 "hover:bg-zinc-200"
-                                 "text-zinc-500 visited:text-zinc-500 hover:text-zinc-700 "
-                                 "data-[highlighted]:bg-zinc-200"
-                                 "data-[delayed-open]:bg-zinc-200"
-                                 "data-[state*=open]:bg-zinc-200"]))
 (def trigger
-  (v/from-element menu/Trigger
-                  {:class trigger-classes}))
+  (v/from-element :el.menu-trigger menu/Trigger))
 
 (def content
   (v/from-element menu/Content
@@ -115,7 +108,7 @@
                                                      :Meta-. cancel-editing!
                                                      :Enter stop-editing!}))
         provider (:file/provider current)]
-    [:<>
+    [:div.flex.items-center.gap-1
      [:div.w-2.h-2.rounded-full.transition-all
       {:class (if (or (= provider :file.provider/local)
                       (seq (persist/changes id)))
@@ -147,7 +140,7 @@
           [:div.px-1.rounded.flex.items-center.justify-center.absolute.top-0.right-0.bottom-0.z-30
            [icons/chevron-down:mini "w-4 h-4"]]]]
         [:el menu/Portal
-         [:el menu/Content {:class "MenubarContent mt-2"}
+         [:el menu/Content {:class "MenubarContent mt-2 z-[60] relative"}
           (when (persist/writable? id)
             [item {:on-click start-editing!} "Rename"])
           [command-item :file/revert]
@@ -176,37 +169,29 @@
 (ui/defview menubar []
   (let [menubar-content @(ui/use-context ::!content)]
     [:<>
-     [:div {:style {:height 40}}]
-     [:div.w-100.fixed.top-0.right-0.flex.items-center.shadow.px-2.text-sm.z-50.bg-neutral-50
-      {:style {:height 40
-               :left (sidebar/sidebar-width)}}
+     [:div.h-12]
+     [:div.w-100.fixed.top-0.right-0.flex.items-stretch.shadow.px-2.text-sm.z-50.bg-neutral-50.h-12.gap-2
+      {:style {:left (sidebar/sidebar-width)}}
       (when-not (:sidebar/visible? @ui/!state)
         [icon-btn {:on-click #(swap! ui/!state update :sidebar/visible? not)}
          [icons/bars3 "w-4 h-4"]])
-      [:el Root {:class "flex flex-row w-full items-center gap-1"}
+      [:el.contents Root
+       (let [cmd (keymaps/resolve-command :file/new)]
+         [:div.menu-trigger.items-center.flex.bg-zinc-500.text-white.hover:text-white.hover:bg-zinc-700.gap-1
+          {:on-click #(keymaps/run-command cmd)}
+          [icons/document-plus:mini "w-5 h-5"]
+          "New"])
        [:div.flex-grow]
        menubar-content
        [:div.flex-grow]
        #_[:a.text-black.inline-flex.items-center {:class trigger-classes
                                                   :href "/"} [icons/home "w-4 h-4"]]
-       [:a.cursor-pointer.p-1.no-underline
+       [:a.cursor-pointer.flex.items-center.no-underline.menu-trigger
         {:href "https://github.com/mhuebert/maria/issues"
-         :target "_blank"
-         :class trigger-classes} "Bug Report"]
-       (let [cmd (keymaps/resolve-command :file/new)]
-         [:div.cursor-pointer.p-1
-          {:class [trigger-classes
-                   "text-zinc-500 hover:text-zinc-700"]
-           :on-click #(keymaps/run-command cmd)}
-          "New"
-          #_[icons/document-plus:mini "w-5 h-5 -mt-[2px]"]]
-         #_[ui/tooltip
-            ...
-            (:title (keymaps/resolve-command :file/new))])
-       [command-bar/input]
+         :target "_blank"} "Bug Report"]
+       [:div.flex.items-center [command-bar/input]]
        (if-let [{:keys [photo-url display-name]} (gh/get-user)]
-         [menu [:el menu/Trigger {:class [trigger-classes
-                                          "rounded-full"]} [avatar photo-url display-name]]
+         [menu [:el.menu-trigger.rounded-full menu/Trigger [avatar photo-url display-name]]
           [command-item :account/sign-out]]
          (if (gh/pending?)
            [icons/loading "w-5 h-5 opacity-30"]

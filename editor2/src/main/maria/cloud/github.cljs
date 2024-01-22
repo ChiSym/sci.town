@@ -6,7 +6,6 @@
                                               getAdditionalUserInfo]]
             [applied-science.js-interop :as j]
             [clojure.string :as str]
-            [maria.cloud.config.public :refer [env]]
             [maria.cloud.local-sync :as local-sync]
             [maria.editor.keymaps :as keymaps]
             [maria.editor.util :as u]
@@ -40,8 +39,6 @@
   (when-let [t (get-token)]
     {:Authorization (str "Bearer " t)}))
 
-(defonce App (firebase/initializeApp (clj->js (:firebase env))))
-
 (def provider (doto (new GithubAuthProvider)
                 (.addScope "gist")))
 
@@ -72,10 +69,6 @@
 (defn sign-out []
   (.signOut (getAuth)))
 
-(defonce _auth_callback
-  (try
-    (.onAuthStateChanged (getAuth) handle-user!)))
-
 (j/defn parse-gist [^js {:keys [id
                                 description
                                 files
@@ -104,8 +97,14 @@
             :gist/html_url html_url
             :gist/updated_at updated_at})))
 
-(keymaps/register-commands!
-  {:account/sign-in {:f (fn [_] (sign-in-with-popup!))
-                     :when (fn [_] (not (get-user)))}
-   :account/sign-out {:f (fn [_] (sign-out))
-                      :when (fn [_] (some? (get-user)))}})
+(defn init []
+  (firebase/initializeApp (clj->js
+                           (db/get :maria.cloud/env :firebase)))
+
+  (.onAuthStateChanged (getAuth) handle-user!)
+
+  (keymaps/register-commands!
+   {:account/sign-in {:f (fn [_] (sign-in-with-popup!))
+                      :when (fn [_] (not (get-user)))}
+    :account/sign-out {:f (fn [_] (sign-out))
+                       :when (fn [_] (some? (get-user)))}}))

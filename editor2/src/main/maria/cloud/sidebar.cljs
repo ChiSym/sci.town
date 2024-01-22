@@ -31,7 +31,7 @@
 
 (def acc-item (v/from-element :a.block
                               {:class ["text-sm text-black no-underline"
-                                       "pr-2 pl-4 mx-1 py-1 rounded"
+                                       "pr-2 pl-4 mx-1 py-1 rounded cursor-default"
                                        "hover:bg-black/5 hover:text-black visited:text-black"
                                        "data-[selected=true]:bg-sky-500 data-[selected=true]:text-white"]}))
 
@@ -45,7 +45,7 @@
     :class ui/c:divider}
    [:> acc/Header
     {:class "flex flex-row h-[40px] m-0"}
-    [:> acc/Trigger {:class "text-sm font-bold cursor-pointer p-2 AccordionTrigger flex-grow"}
+    [:> acc/Trigger {:class "text-sm font-bold p-2 AccordionTrigger flex-grow"}
      [icons/chevron-right:mini "w-4 h-4 -ml-1 AccordionChevron"]
      title]]
    (into [:el.flex.flex-col.gap-1 acc/Content] items)])
@@ -101,12 +101,13 @@
                   :on-value-change #(swap! ui/!state assoc :sidebar/open (set %))
                   :class "relative"}
 
-     [:div {:class "flex flex-row h-[40px] items-center border-b border-zinc-100"}
-      [:div.flex.items-center.justify-center.py-2.px-3.cursor-pointer.text-zinc-500.hover:text-zinc-700
+     [:div {:class "flex flex-row h-[40px] items-stretch border-b border-zinc-100"}
+      [:div.flex.items-center.px-3.icon-zinc
        {:on-click #(swap! ui/!state assoc :sidebar/visible? false)
         :style {:margin-top 3}}
        [icons/x-mark:mini "w-5 h-5 rotate-180"]]
-      [:div.flex-grow]]
+      [:div.flex-grow]
+      [:a.px-3.flex.items-center.icon-zinc {:href "/"} [icons/home "w-5 h-5"]]]
 
      [recents current-path]
      [curriculum-list current-path]

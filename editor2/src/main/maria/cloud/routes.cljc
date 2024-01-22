@@ -40,7 +40,9 @@
    (defn handle-match [{:as match ::keys [view redirect]}]
      (if redirect
        (pushy/set-token! history redirect)
-       (lazy/load view (fn [view] (reset! !location (assoc match ::view view)))))))
+       (lazy/load view
+                  (fn [view]
+                    (reset! !location (assoc match ::view view)))))))
 
 #?(:cljs
    (defonce history (pushy/pushy handle-match match-route)))
