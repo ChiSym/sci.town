@@ -11,13 +11,14 @@
 (def modules
   "A map of shadow lazy modules to namespace prefixes that they provide."
 
-  ;; our basic approach is to keep a (handwritten) index of modules, along with
-  ;; their dependency and provided prefixes (first namespace segment).
+  ;; this is a handwritten index of sci extension modules, each of which contains:
+  ;; :loadable   - a shadow.lazy/Loadable pointing to a sci install function
+  ;; :prefixes   - a list of prefixes (first namespace segment) that the module provides
+  ;; :depends-on - the set of other modules in this index which must be loaded first
 
-  ;; A more principled approach for mapping modules to namespaces would be nice,
-  ;; but at build-time we don't know which modules a given
-  ;; sci loadable will load. (it depends not on the shadow-cljs module structure
-  ;; but rather what happens inside the `install!` function)
+  ;; A more principled approach for namespace-module mapping would be nice,
+  ;; but at build-time we don't know which modules a given sci loadable will provide.
+  ;; It depends not on the shadow-cljs module but on what happens inside the `install!` function.
 
   {:reagent {:loadable (lazy/loadable maria.editor.extensions.reagent/install!)
              :prefixes '[reagent]}
