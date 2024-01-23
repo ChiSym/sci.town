@@ -98,3 +98,7 @@
   (when-let [port (-> build-state :devtools :http-port)]
     (browse-url (str "http://localhost:" port)))
   build-state)
+
+(comment
+  (shadow.api/stop-worker :editor)
+  (shadow.api/release :editor))
