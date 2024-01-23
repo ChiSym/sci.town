@@ -194,5 +194,5 @@
          (if (gh/pending?)
            [icons/loading "w-5 h-5 opacity-30"]
            [button-small-med
-            {:on-click #(gh/sign-in-with-popup!)}
+            {:on-click #(gh/sign-in!)}
             [icons/github "w-4 h-4 mr-2"] "Sign in"]))]]]))

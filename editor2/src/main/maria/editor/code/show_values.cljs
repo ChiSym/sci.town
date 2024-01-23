@@ -200,7 +200,7 @@
      !parent]))
 
 (defview show-coll [left right opts coll]
-  (let [coll (if (:sort-colls? opts true)
+  (let [coll (if (:sort-colls? opts false)
                (sort (fn [a b]
                        (try (compare a b) (catch js/Error e -1)))
                      coll)
@@ -267,7 +267,8 @@
       [:div.text-string {:class ["max-h-[80vh] overflow-y-auto"]
                          :on-click #(toggle! not)} x])))
 
-(def show-map (partial show-coll "{" "}"))
+(def show-map (fn [opts x]
+                (show-coll "{" "}" (merge {:sort-colls? true} opts) x)))
 (def show-set (partial show-coll "#{" "}"))
 (def show-list (partial show-coll "(" ")"))
 (def show-vector (partial show-coll \[ \]))

@@ -100,5 +100,6 @@
   build-state)
 
 (comment
+  (watch)
   (shadow.api/stop-worker :editor)
   (shadow.api/release :editor))
