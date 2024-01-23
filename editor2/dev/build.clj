@@ -51,7 +51,7 @@
 (read-curriculum-namespaces)
 
 (defn index-html []
-  (page/root "Maria"
+  (page/root "sci.town"
              {:meta {:viewport "width=device-width, initial-scale=1"}
               :styles [{:href (assets/path "/editor.css")}]
               :scripts/head [{:src "https://polyfill.io/v3/polyfill.min.js?version=3.111.0&features=URLSearchParams%2CURL"}]

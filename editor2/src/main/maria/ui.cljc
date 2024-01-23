@@ -48,7 +48,7 @@
 
 (def c:divider "border-b-2 border-zinc-100")
 (def c:button-med (str "bg-zinc-300 hover:bg-zinc-400 active:bg-zinc-500 "
-                       "font-sans font-bolxd no-underline "
+                       "font-sans no-underline "
                        "text-zinc-800 visited:text-zinc-800 hover:text-zinc-800 "
                        #_"text-white visited:text-white hover:text-white "
                        "cursor-pointer"))
