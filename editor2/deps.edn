@@ -1,5 +1,5 @@
 {:paths ["src/main"]
- :deps {thheller/shadow-cljs {:mvn/version "2.24.1"}
+ :deps {thheller/shadow-cljs {:mvn/version "2.26.5"}
         org.clojure/clojure {:mvn/version "1.12.0-alpha3"}
         applied-science/js-interop {#_#_:mvn/version "0.4.1"
                                     :git/url "https://github.com/applied-science/js-interop"
@@ -25,12 +25,13 @@
                       :deps/root "shapes"}
 
         io.github.applied-science/shapes {:git/sha "da44031cf79a649932cb502f17388db23f2b8ace"}
-        io.github.mhuebert/re-db {:git/sha "066439e228ae4a48383055970af74b2600b48050"}
-        io.github.mhuebert/yawn {:git/sha "4fee46087eb907b1e2cd62aea9f05549d08e11a8"}
+        io.github.mhuebert/re-db {:git/sha "e6eadd0d7e9c33c5a10a3266a8c6fd0863483991"}
+        io.github.mhuebert/yawn {:git/sha "68285f6c132f26a2ff3cc2f7dffc3fe68c9856d9"}
 
         ;; emmy / clerk
         io.github.mhuebert/emmy #_org.mentat/emmy {:git/url "https://github.com/mhuebert/emmy"
                                                    :git/sha "f452bbb9714be25fa141a7e9a39c4e48d1164bf3"}
+        io.github.probcomp/Gen.clj {:git/sha "06d5edb3750c8b1b597bd0dfead15986027762b6"}
         org.mentat/emmy-viewers {:mvn/version "0.2.0"}
         io.github.nextjournal/clerk {:git/sha "d80187013d7b7b96db3d8b114b8d99f687170668"}
         io.github.nextjournal/clerk.render {:git/url "https://github.com/nextjournal/clerk"
@@ -42,7 +43,8 @@
 
         }
  :aliases
- {:local {:extra-deps {#_#_org.mentat/emmy {:local/root "../../emmy"}
+ {:local {:extra-deps {io.github.probcomp/Gen.clj {:local/root "../../Gen.clj"}
+                       #_#_org.mentat/emmy {:local/root "../../emmy"}
                        #_#_io.github.babashka/sci {:local/root "../../sci"}
                        #_#_applied-science/js-interop {:local/root "../../js-interop"}
                        #_#_nextjournal/clojure-mode {:local/root "../../clojure-mode"}

@@ -5,6 +5,7 @@
             [cljs-static.page :as page]
             [cljs-static.shadow :as shadow]
             [clojure.java.browse :as browse]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [edamame.core :as eda]
             [maria.editor.util :as u]
@@ -63,8 +64,9 @@
                                                                    schema/string)})}
                              {:type "application/re-db:tx"
                               :value (conj (read-curriculum-namespaces)
-                                           {:db/id :maria.cloud/env
-                                            :git/sha (current-sha)})}
+                                           (merge {:db/id :maria.cloud/env
+                                                   :git/sha (current-sha)}
+                                                  (read-string (slurp (io/resource "config.public.edn")))))}
                              {:src (shadow/module-path :editor :core)}]}))
 
 (defn tailwind-watch!

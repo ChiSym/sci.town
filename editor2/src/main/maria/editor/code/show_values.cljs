@@ -100,6 +100,8 @@
      {:title "Print to console"
       :on-click #(do (js/console.error error)
                      (some-> (sci/stacktrace error) seq pprint))} (icons/command-line:mini "w-5 h-5")]]
+   (when-let [data (ex-data error)]
+     (show opts data))
    #_[:pre (ui/pprinted (ex-data error))]
    (when-let [stack (seq (sci/stacktrace error))]
      [:div.p-2
@@ -198,7 +200,12 @@
      !parent]))
 
 (defview show-coll [left right opts coll]
-  (let [[coll more! !wrapper !parent] (use-limit coll 10)]
+  (let [coll (if (:sort-colls? opts true)
+               (sort (fn [a b]
+                       (try (compare a b) (catch js/Error e -1)))
+                     coll)
+               coll)
+        [coll more! !wrapper !parent] (use-limit coll 10)]
     [show-brackets
      left
      right
@@ -226,7 +233,11 @@
     (h/use-effect
       (fn []
         (v! ::loading)
-        (p/then p v!)
+        (-> p
+            (p/then v!)
+            ;; if promise throws, catch it for display purposes but re-throw
+            ;; as the view layer should not modify behaviour
+            (p/catch (fn [e] (v! e) (throw e))))
         nil)
       [p])
     (v/x
@@ -342,16 +353,22 @@
                  (when (react/isValidElement x)
                    x)))
 
-             (handles-keys #{:hiccup}
-               (fn [opts x]
-                 (when (:hiccup (meta x))
-                   (v/x x))))
-
              (handles-keys #{:TeX}
                ;; THIS IS TEMPORARY FOR TESTING
                (fn [opts x]
                  (when-let [s (:TeX (meta x))]
                    (show-katex opts s))))
+
+             (handles-keys #{:hiccup}
+               (fn [opts x]
+                 (when (and (instance? PersistentVector x)
+                            (keyword? (first x))
+                            ;; provides ^:vector [] as an escape-hatch
+                            ;; to prevent hiccup rendering. otherwise, treat
+                            ;; any vector whose first child is a keyword as hiccup.
+                            ;; (useful for demos, unsure if we should keep this behaviour)
+                            (not (:vector (meta x))))
+                   (v/x x))))
 
              (handles-keys #{:number
                              :symbol
@@ -454,7 +471,7 @@
   "Adds viewers to the global list of viewers, before/after the given viewer-key.
    See builtin-viewers to see what viewer-keys can be referred to"
   [ctx where viewer-key added-viewers]
-  {:pre [(#{:before :after} where)]}
+  {:pre [(contains? #{:before :after nil} where)]}
   (let [!viewers (:!viewers ctx)]
     (->> (insert where
                  (comp viewer-key ::keys meta)
@@ -512,3 +529,17 @@
                                           #{:foo}])))
 
 
+(def ^:export extra-tailwind-classes
+  ;; placeholder to put tailwind classes which should be available after minification/compile step.
+  ;; check if there is a better way to do this
+  ["text-xs text-sm text-lg text-xl text-2xl text-3xl text-4xl text-5xl text-6xl text-7xl text-8xl"
+   "flex-wrap gap-1 gap-2 gap-3 gap-4 gap-5 gap-6 gap-7 gap-8"
+   "bg-black"
+   "px-1 px-2 px-3 px-4 px-5 px-6 px-7 px-8"
+   "py-1 py-2 py-3 py-4 py-5 py-6 py-7 py-8"
+   "p-1 p-2 p-3 p-4 p-5 p-6 p-7 p-8"
+   "mx-1 mx-2 mx-3 mx-4 mx-5 mx-6 mx-7 mx-8"
+   "my-1 my-2 my-3 my-4 my-5 my-6 my-7 my-8"
+   "m-1 m-2 m-3 m-4 m-5 m-6 m-7 m-8"
+   "h-1 h-2 h-3 h-4 h-5 h-6 h-7 h-8 h-9 h-10"
+   "leading-1 leading-2 leading-3 leading-4 leading-5 leading-6 leading-7 leading-8 leading-9 leading-10"])

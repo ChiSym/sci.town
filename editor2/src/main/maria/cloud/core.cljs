@@ -48,13 +48,14 @@
          [sidebar/with-sidebar
           [sidebar/content]
           [:div
-           [menu/menubar ]
+           [menu/menubar]
            (when view
              [view location])]]
          [docbar/view]]))))
 
 (defn ^:export init []
   (init-re-db)
+  (gh/init)
   (routes/init)
   (root/create :maria-live (v/<> [root])))
 

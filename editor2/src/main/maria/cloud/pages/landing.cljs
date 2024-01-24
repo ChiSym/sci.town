@@ -10,21 +10,18 @@
 (defview page []
   [:div.font-serif.text-center.px-3.mx-auto.mt-3
    {:style {:max-width 500}}
-   [:div.pt-5 {:class "text-[3rem]"} "Welcome to Maria,"]
-   [:div.text-2xl "a coding environment for beginners."]
+   [:div.pt-5 {:class "text-[3rem]"} "Welcome to sci.town,"]
+   [:div.text-2xl "an exploratory environment for probabilistic programming."]
 
-   [:div.flex.flex-col.bg-zinc-200.rounded.my-6.p-6.gap-4
-    [:div "Start Here: "]
+   [:div.flex.flex-col.bg-zinc-200.rounded.my-6.p-4.gap-4
+    [:div.text-2xl "Start Here: "]
     [:a.rounded-md.p-3.block.flex-grow
      {:class ["text-base" ui/c:button-light]
-      :href "/intro"} "Learn Clojure with Shapes"]]
+      :href "/gist/1a467e0075fc8d18609f715c11c28061"} "Introduction to Gen"]]
 
    [:div.text-left.pl-6
     [:div.italic.text-lg.text-left.mb-2.mt-4 "Further reading:"]
 
     [:ul.text-base.text-left.leading-normal.list-disc.pl-5
-     [:li "An " (link "Example Gallery" "/gallery?eval=true") " of user creations."]
-     [:li "The " (link "Editor Quickstart" "/quickstart") " explains how to use Maria."]
-
-     [:li "Understand the " (link "Pedagogy" "https://github.com/mhuebert/maria/wiki/Curriculum") " behind Maria's curriculum."]
-     [:li "Discover " (link "Sources of Inspiration" "https://github.com/mhuebert/maria/wiki/Background-reading") " for the project."]]]])
+     [:li "TODO: add references/links, "
+      (link "Example" "https://example.com")]]]])

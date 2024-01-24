@@ -16,25 +16,44 @@
     --code-bool: #987aa0;
     --code-brackets: #9f9f9f;
 }
+
 @layer base {
     .prose code::before, .prose code::after {
         content: none;
     }
+
     a {
         @apply underline text-blue-600 hover:text-blue-800 visited:text-purple-700
     }
 }
-@layer components {
 
+@layer components {
+    .icon-zinc {
+        @apply text-zinc-500 hover:text-zinc-700 cursor-default
+    }
+
+    .menu-trigger {
+        @apply
+        px-1 my-2 bg-transparent rounded
+        hover:bg-zinc-200
+        text-zinc-500 visited:text-zinc-500 hover:text-zinc-700
+        data-[highlighted]:bg-zinc-200
+        data-[delayed-open]:bg-zinc-200
+        data-[state*=open]:bg-zinc-200
+        cursor-default
+    }
 }
+
 @layer utilities {
 
     ::placeholder, .placeholder {
         @apply text-black/50
     }
+
     .gap-list {
         @apply gap-[6px]
     }
+
     .rotate-4s {
         animation: rotation 4s infinite linear;
     }
@@ -102,6 +121,7 @@ p code {
     font-size: 1.1rem;
     line-height: 1.5rem;
 }
+
 h1 {
     @apply text-4xl;
 }
@@ -205,7 +225,6 @@ h5 {
 }
 
 
-
 /* Radix UI */
 
 
@@ -244,7 +263,7 @@ button {
 
 .MenubarContent,
 .MenubarSubContent {
-    @apply shadow rounded bg-white z-20 p-[2px];
+    @apply shadow rounded bg-white z-[60] p-[2px];
     min-width: 220px;
     animation-duration: 400ms;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
