@@ -168,26 +168,24 @@
   (let [menubar-content @(ui/use-context ::!content)]
     [:<>
      [:div.h-12]
-     [:div.w-100.fixed.top-0.right-0.flex.items-stretch.shadow.px-2.text-sm.z-50.bg-neutral-50.h-12.gap-2
+     [:div.w-100.fixed.top-0.right-0.flex.items-stretch.shadow.px-2.text-sm.z-50.bg-neutral-50.h-12.gap-2.overflow-x-auto
       {:style {:left (sidebar/sidebar-width)}}
       (when-not (:sidebar/visible? @ui/!state)
         [icon-btn {:on-click #(swap! ui/!state update :sidebar/visible? not)}
          [icons/bars3 "w-4 h-4"]])
       [:el.contents Root
        (let [cmd (keymaps/resolve-command :file/new)]
-         [:div.menu-trigger.items-center.flex.bg-zinc-500.text-white.hover:text-white.hover:bg-zinc-700.gap-1
+         [:div.menu-trigger.items-center.flex.bg-zinc-500.text-white.hover:text-white.hover:bg-zinc-700.gap-1.mr-auto
           {:on-click #(keymaps/run-command cmd)}
           [icons/document-plus:mini "w-5 h-5"]
           "New"])
-       [:div.flex-grow]
        menubar-content
-       [:div.flex-grow]
-       #_[:a.text-black.inline-flex.items-center {:class trigger-classes
-                                                  :href "/"} [icons/home "w-4 h-4"]]
-       [:a.flex.items-center.no-underline.menu-trigger
+       [:a.flex.items-center.no-underline.menu-trigger.ml-auto
         {:href "https://github.com/mhuebert/maria/issues"
-         :target "_blank"} "Bug Report"]
-       [:div.flex.items-center [command-bar/input]]
+         :target "_blank"}
+        [:span.hidden.sm:inline-flex "Bug Report"]
+        [:span.sm:invisible [icons/bug-ant "w-4 h-4"]]]
+       [command-bar/input]
        (if-let [{:keys [photo-url display-name]} (gh/get-user)]
          [menu [:el.menu-trigger.rounded-full menu/Trigger [avatar photo-url display-name]]
           [command-item :account/sign-out]]
