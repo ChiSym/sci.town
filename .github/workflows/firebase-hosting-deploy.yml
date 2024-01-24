@@ -1,0 +1,63 @@
+name: Deploy to Firebase Hosting on PR
+'on': [pull_request, push]
+jobs:
+  build_and_preview:
+    runs-on: ubuntu-latest
+    env:
+      dir: './editor2'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Reconfigure git to use HTTP authentication
+        run: >
+          git config --global url."https://github.com/".insteadOf
+          ssh://git@github.com/
+      - name: Cache clojure dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{env.dir}}/.cpcache 
+            ${{env.dir}}/.shadow-cljs
+            ~/.m2/repository
+            ~/.gitlibs
+            ~/.deps.clj
+          key: cljdeps-${{ hashFiles('${{env.dir}}/deps.edn', '${{env.dir}}/bb.edn') }}
+          restore-keys: cljdeps-
+      - name: Cache yarn
+        uses: actions/cache@v3
+        with:
+          path: ${{env.dir}}/node_modules
+          key: yarn-${{ hashFiles('${{env.dir}}/yarn.lock') }}
+          restore-keys: yarn-
+      - name: clojure tools
+        uses: DeLaGuardo/setup-clojure@9.5
+        with:
+          bb: 0.9.162
+          cli: 1.11.1.1347 # Clojure CLI based on tools.deps
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: yarn deps
+        working-directory: ${{env.dir}}
+        run: yarn
+
+      - name: Build static site
+        working-directory: ${{env.dir}}
+        run: bb release
+
+      # PREVIEW deploys
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          entryPoint: ${{env.dir}}
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_CALIBAN }}'
+          expires: 30d
+          projectId: probcomp-caliban
+
+      # PROD deploys
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'huebert/hosting')
+        with:
+          entryPoint: ${{env.dir}}
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_CALIBAN }}'
+          channelId: live
+          projectId: probcomp-caliban

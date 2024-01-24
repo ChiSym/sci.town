@@ -10,7 +10,7 @@
    :dev {:build-hooks [(build/tailwind-watch!)
                        (build/copy-curriculum!)
                        (build/browse!)]}
-   :release {:build-hooks [(shadow.cljs.build-report/hook {:output-to "public/build-report.html"})]}
+   :release {:build-hooks [#_(shadow.cljs.build-report/hook {:output-to "public/build-report.html"})]}
    :devtools {:http-root "public"
               :http-port 8000
               :preloads [yawn.view.refresh-preload]}

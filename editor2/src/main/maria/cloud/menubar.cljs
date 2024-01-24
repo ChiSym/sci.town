@@ -17,7 +17,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Components
 
-(def item-classes (v/classes ["flex items-center h-7 px-2 text-sm cursor-pointer rounded text-inherit visited:text-inherit no-underline"
+(def item-classes (v/classes ["flex items-center h-7 px-2 text-sm rounded text-inherit visited:text-inherit no-underline"
                               "data-[disabled]:cursor-default data-[disabled]:text-zinc-400"
                               "data-[highlighted]:outline-none data-[highlighted]:bg-sky-500 data-[highlighted]:text-white"]))
 
@@ -25,7 +25,7 @@
   (v/from-element menu/Item {:class item-classes}))
 
 (def icon-btn
-  (v/from-element :div.cursor-pointer.p-1.flex.items-center.m-1))
+  (v/from-element :div.p-1.flex.items-center.m-1))
 
 (def shortcut
   (v/from-element :div.ml-auto.pl-3.tracking-widest.text-menu-muted))
@@ -75,9 +75,7 @@
                         :class "text-xs font-bold text-zinc-700"} initials]]))
 
 (def button-small-med
-  (v/from-element :a
-                  {:class ["rounded flex items-center px-2 py-1 shadow cursor-pointer text-sm"
-                           ui/c:button-med]}))
+  (v/from-element :a.menu-trigger.rounded.flex.items-center.px-2.py-1.text-sm.no-underline))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Menubar
@@ -170,32 +168,29 @@
   (let [menubar-content @(ui/use-context ::!content)]
     [:<>
      [:div.h-12]
-     [:div.w-100.fixed.top-0.right-0.flex.items-stretch.shadow.px-2.text-sm.z-50.bg-neutral-50.h-12.gap-2
+     [:div.w-100.fixed.top-0.right-0.flex.items-stretch.shadow.px-2.text-sm.z-50.bg-neutral-50.h-12.gap-2.overflow-x-auto
       {:style {:left (sidebar/sidebar-width)}}
       (when-not (:sidebar/visible? @ui/!state)
         [icon-btn {:on-click #(swap! ui/!state update :sidebar/visible? not)}
          [icons/bars3 "w-4 h-4"]])
       [:el.contents Root
        (let [cmd (keymaps/resolve-command :file/new)]
-         [:div.menu-trigger.items-center.flex.bg-zinc-500.text-white.hover:text-white.hover:bg-zinc-700.gap-1
+         [:div.menu-trigger.items-center.flex.bg-zinc-500.text-white.hover:text-white.hover:bg-zinc-700.gap-1.mr-auto
           {:on-click #(keymaps/run-command cmd)}
           [icons/document-plus:mini "w-5 h-5"]
           "New"])
-       [:div.flex-grow]
        menubar-content
-       [:div.flex-grow]
-       #_[:a.text-black.inline-flex.items-center {:class trigger-classes
-                                                  :href "/"} [icons/home "w-4 h-4"]]
-       [:a.cursor-pointer.flex.items-center.no-underline.menu-trigger
+       [:a.flex.items-center.no-underline.menu-trigger.ml-auto
         {:href "https://github.com/mhuebert/maria/issues"
-         :target "_blank"} "Bug Report"]
-       [:div.flex.items-center [command-bar/input]]
+         :target "_blank"}
+        [:span.hidden.sm:inline-flex "Bug Report"]
+        [:span.sm:invisible [icons/bug-ant "w-4 h-4"]]]
+       [command-bar/input]
        (if-let [{:keys [photo-url display-name]} (gh/get-user)]
          [menu [:el.menu-trigger.rounded-full menu/Trigger [avatar photo-url display-name]]
           [command-item :account/sign-out]]
          (if (gh/pending?)
            [icons/loading "w-5 h-5 opacity-30"]
            [button-small-med
-            {:on-click #(gh/sign-in-with-popup!)}
-            [icons/github "w-4 h-4 mr-2"]
-            "Sign In " [:span.hidden.md:inline.pl-1 " with GitHub"]]))]]]))
+            {:on-click #(gh/sign-in!)}
+            [icons/github "w-4 h-4 mr-2"] "Sign in"]))]]]))

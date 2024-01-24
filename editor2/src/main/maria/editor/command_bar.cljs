@@ -1,6 +1,5 @@
 (ns maria.editor.command-bar
   (:require ["cmdk$Command" :as Command]
-            ["cmdk" :refer [useCommandState]]
             ["@radix-ui/react-popover" :as Popover]
             [clojure.string :as str]
             [maria.editor.keymaps :as keymaps]
@@ -41,9 +40,9 @@
         keydown-handler (h/use-memo #(ui/keydown-handler {:Escape close!
                                                           :Mod-. close!}))]
     [:el Popover/Root {:open true}
-     [:el.relative Command {:label "Command Menu"}
+     [:el.relative.place-self-center Command {:label "Command Menu"}
       [:el Popover/Anchor {:asChild true}
-       [:el.rounded.border-slate-300.h-6.px-2.py-0.text-sm.h-7 Command/Input
+       [:el.rounded.border-slate-300.px-2.py-0.text-sm.h-7.w-32.sm:w-48 Command/Input
         {:value @!search
          :placeholder "Commands..."
          :on-mouse-down #(reset! keymaps/!prev-selected-element (.-activeElement js/document))

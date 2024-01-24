@@ -1,7 +1,8 @@
-;; TODO replace with sci.town Firebase config
-{:firebase {:apiKey "AIzaSyCu4fEYMcfW6vzQWB0TS--Jphv3hzBqUyo",
-            :authDomain "maria-d04a7.firebaseapp.com",
-            :databaseURL "https://maria-d04a7.firebaseio.com",
-            :projectId "maria-d04a7",
-            :storageBucket "maria-d04a7.appspot.com",
-            :messagingSenderId "832199278239"}}
+{:firebase
+ {:apiKey "AIzaSyAkgqCM8D3tIXSa4syOznM9R1iWiYsNrYo",
+  :authDomain "probcomp-caliban.firebaseapp.com",
+  :projectId "probcomp-caliban",
+  :storageBucket "probcomp-caliban.appspot.com",
+  :messagingSenderId "110275315150"
+  :appId "1:110275315150:web:1b9223380683724a12979f"
+  :measurementId "G-VE7SK9ZG6J"}}

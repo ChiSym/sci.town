@@ -58,7 +58,7 @@
         (db/transact! [[:db/retractEntity ::user]])
         (reset! !initialized? true))))
 
-(defn sign-in-with-popup! []
+(defn sign-in! []
   (p/let [result (signInWithPopup (getAuth) provider)]
     (set-token! {(j/get-in result [:user :uid])
                  (-> (.credentialFromResult GithubAuthProvider result)
@@ -104,7 +104,7 @@
   (.onAuthStateChanged (getAuth) handle-user!)
 
   (keymaps/register-commands!
-   {:account/sign-in {:f (fn [_] (sign-in-with-popup!))
+   {:account/sign-in {:f (fn [_] (sign-in!))
                       :when (fn [_] (not (get-user)))}
     :account/sign-out {:f (fn [_] (sign-out))
                        :when (fn [_] (some? (get-user)))}}))
