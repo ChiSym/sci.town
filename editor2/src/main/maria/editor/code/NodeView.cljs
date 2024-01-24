@@ -223,8 +223,31 @@
                                         (show opts x))
                               :value value}]))]))
 
+(defn temporarily-disable-contenteditable [start-event end-event]
+  ;; Ugly hack: temporarily disable contenteditable when users interact with ".value-viewer" regions,
+  ;; to prevent iOS keyboard from showing up & scrolling to unwanted regions of the document.
+  ;; (I tried using `stopPropagation` on value-viewer nodes and that did not seem to work;
+  ;;  maybe there's still a better way.)
+  (.addEventListener js/window start-event
+                     (fn [^js e]
+                       (when-let [value-viewer (.. e -target (closest ".value-viewer"))]
+                         (let [notebook (.closest value-viewer ".notebook")]
+                           (j/!set notebook :contentEditable "false")
+                           (.addEventListener js/window end-event
+                                              (fn listener [e]
+                                                (j/!set notebook :contentEditable "true")
+                                                (.removeEventListener js/window start-event listener))
+                                              true))))
+                     true))
+
+(defonce _
+         (do
+           (temporarily-disable-contenteditable "touchstart" "touchend")
+           (temporarily-disable-contenteditable "mousedown" "mouseup")))
+
 (v/defview code-row [^js {:as this :keys [!result !ui-state id CodeView]}]
-  (let [ref (h/use-callback (fn [el] (when el (mount-code-view! el this))))
+  (let [ref (h/use-callback (fn [el]
+                              (when el (mount-code-view! el this))))
         {:keys [hide-source node-selected?]} (h/use-deref !ui-state)
         hide-source? (if (some? hide-source)
                        hide-source
