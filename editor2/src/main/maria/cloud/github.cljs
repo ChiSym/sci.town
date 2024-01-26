@@ -1,9 +1,6 @@
 (ns maria.cloud.github
-  (:require ["firebase/app" :as firebase]
-            ["firebase/auth" :as auth :refer [getAuth
-                                              GithubAuthProvider
-                                              signInWithPopup
-                                              getAdditionalUserInfo]]
+  (:require ["firebase/app" :as Firebase]
+            ["firebase/auth" :as Auth]
             [applied-science.js-interop :as j]
             [clojure.string :as str]
             [maria.cloud.local-sync :as local-sync]
@@ -39,7 +36,7 @@
   (when-let [t (get-token)]
     {:Authorization (str "Bearer " t)}))
 
-(def provider (doto (new GithubAuthProvider)
+(def provider (doto (new Auth/GithubAuthProvider)
                 (.addScope "gist")))
 
 (j/defn handle-user! [^js {:as user :keys [photoURL email displayName uid]
@@ -58,16 +55,19 @@
         (db/transact! [[:db/retractEntity ::user]])
         (reset! !initialized? true))))
 
-(defn sign-in! []
-  (p/let [result (signInWithPopup (getAuth) provider)]
+(defn handle-auth-result! [result]
+  (when result
     (set-token! {(j/get-in result [:user :uid])
-                 (-> (.credentialFromResult GithubAuthProvider result)
+                 (-> (.credentialFromResult Auth/GithubAuthProvider result)
                      (j/get :accessToken))})
     (handle-user! (j/get result :user))))
 
+(defn sign-in! []
+  (p/-> (Auth/signInWithPopup (Auth/getAuth) provider)
+        handle-auth-result!))
 
 (defn sign-out []
-  (.signOut (getAuth)))
+  (.signOut (Auth/getAuth)))
 
 (j/defn parse-gist [^js {:keys [id
                                 description
@@ -98,13 +98,16 @@
             :gist/updated_at updated_at})))
 
 (defn init []
-  (firebase/initializeApp (clj->js
-                           (db/get :maria.cloud/env :firebase)))
+  (Firebase/initializeApp (clj->js
+                            (db/get :maria.cloud/env :firebase)))
 
-  (.onAuthStateChanged (getAuth) handle-user!)
+  ;; this doesn't work yet, but redirects are preferred for mobile
+  (p/-> (Auth/getRedirectResult (Auth/getAuth)) handle-auth-result!)
+
+  (.onAuthStateChanged (Auth/getAuth) handle-user!)
 
   (keymaps/register-commands!
-   {:account/sign-in {:f (fn [_] (sign-in!))
-                      :when (fn [_] (not (get-user)))}
-    :account/sign-out {:f (fn [_] (sign-out))
-                       :when (fn [_] (some? (get-user)))}}))
+    {:account/sign-in {:f (fn [_] (sign-in!))
+                       :when (fn [_] (not (get-user)))}
+     :account/sign-out {:f (fn [_] (sign-out))
+                        :when (fn [_] (some? (get-user)))}}))

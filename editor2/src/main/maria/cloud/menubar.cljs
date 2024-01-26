@@ -181,9 +181,9 @@
           "New"])
        menubar-content
        [:a.flex.items-center.no-underline.menu-trigger.ml-auto
-        {:href "https://github.com/mhuebert/maria/issues"
+        {:href "https://github.com/probcomp/sci.town/issues"
          :target "_blank"}
-        [:span.hidden.sm:inline-flex "Bug Report"]
+        [:span.hidden.contents.sm:inline-flex "Bug Report"]
         [:span.sm:invisible [icons/bug-ant "w-4 h-4"]]]
        [command-bar/input]
        (if-let [{:keys [photo-url display-name]} (gh/get-user)]
