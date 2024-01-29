@@ -48,7 +48,7 @@
 
     .value-viewer {
         @apply
-        w-full pl-4 md:pl-0 md:w-1/2 font-mono text-sm md:ml-3 mt-3 md:mt-0 max-h-screen min-h-14 overflow-auto relative flex
+        w-full px-4 md:pl-0 md:w-1/2 font-mono text-sm md:ml-3 mt-3 md:mt-0 max-h-screen min-h-14 overflow-auto relative
     }
 }
 
