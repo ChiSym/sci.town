@@ -1,6 +1,8 @@
 (ns maria.cloud.github
   (:require ["firebase/app" :as Firebase]
             ["firebase/auth" :as Auth]
+            ["firebase/database" :as Database]
+            [maria.cloud.firebase.database :as fdb]
             [applied-science.js-interop :as j]
             [clojure.string :as str]
             [maria.cloud.local-sync :as local-sync]
@@ -10,9 +12,10 @@
             [re-db.api :as db]
             [re-db.reactive :as r]))
 
-;; TODO ...
-;; wait to load gist page until we have an auth result (in/out)
-;; to avoid load failure while waiting for auth to complete?
+(defonce !app
+         (delay
+           (Firebase/initializeApp (clj->js
+                                     (db/get :maria.cloud/env :firebase)))))
 
 (defonce !initialized? (r/atom false))
 
@@ -46,6 +49,12 @@
                     :photo-url photoURL
                     :email email
                     :display-name displayName})
+
+        ;; we always (re)set the user's displayName and photoURL;
+        ;; alternatively we could check first if they exist
+        (fdb/assoc-in! ["profile" uid]
+                       {:displayName displayName
+                        :avatar photoURL})
         (p/let [username (p/-> (u/fetch (str "https://api.github.com/user/" github-uid) :headers (auth-headers))
                                (j/call :json)
                                (j/get :login))]
@@ -98,9 +107,7 @@
             :gist/updated_at updated_at})))
 
 (defn init []
-  (Firebase/initializeApp (clj->js
-                            (db/get :maria.cloud/env :firebase)))
-
+  (reset! fdb/!db (Database/getDatabase @!app))
   ;; this doesn't work yet, but redirects are preferred for mobile
   (p/-> (Auth/getRedirectResult (Auth/getAuth)) handle-auth-result!)
 

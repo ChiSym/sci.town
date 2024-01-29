@@ -9,9 +9,11 @@
             ["react-dom" :as react-dom]
             [applied-science.js-interop :as j]
             [applied-science.js-interop.alpha :refer [js]]
-            [maria.cloud.markdown :as markdown]
-            [maria.cloud.persistence :as persist]
+            [maria.cloud.firebase.database :as fdb]
+            [maria.cloud.github :as gh]
             [maria.cloud.menubar :as menu]
+            [maria.cloud.persistence :as persist]
+            [maria.cloud.routes :as routes]
             [maria.editor.code.NodeView :as NodeView]
             [maria.editor.code.commands :as commands]
             [maria.editor.code.parse-clj :as parse-clj :refer [clojure->markdown]]
@@ -22,9 +24,9 @@
             [maria.editor.prosemirror.schema :as schema]
             [maria.editor.util :as u]
             [maria.ui :as ui]
+            [re-db.api :as db]
             [yawn.hooks :as h]
-            [yawn.view :as v]
-            [maria.cloud.routes :as routes]))
+            [yawn.view :as v]))
 
 (defonce focused-state-key (new p.state/PluginKey "focused-state"))
 
@@ -84,17 +86,65 @@
               (map (j/get :textContent)))
         (j/get-in doc [:content :content])))
 
-(defn use-menubar-title-dropdown! [id]
+(ui/defview show-avatar [i uid]
+  (when-let [{:as foo :keys [avatar displayName]} (first (fdb/use-map [:profile uid]))]
+    [:img.w-5.h-5.rounded {:key i :src avatar :title displayName}]))
+
+(ui/defview show-presence-avatars [doc-id]
+  ;; TODO
+  ;; - on hover, show the full list in a popover
+  ;; - if user has no avatar, show initials
+  (when-let [uids (some->> (fdb/use-map [:presence (fdb/munge doc-id)])
+                           first
+                           (sort-by (fn [a b] (compare b a)) val)
+                           (map (comp name key))
+                           ;; comment this to show current user, for testing
+                           (remove #{(db/get ::gh/user :uid)})
+                           (take 3))]
+    (let [overflow? (> (count uids) 2)
+          show-uids (if overflow?
+                      (take 2 uids)
+                      uids)]
+      [:div.flex.gap-1.items-center
+       (map-indexed show-avatar show-uids)
+       (when overflow?
+         [:div
+          {:class ["bg-zinc-200 text-zinc-500"
+                   "text-xs font-semibold"
+                   "w-5 h-5 rounded"
+                   "inline-flex items-center justify-center"]}
+          (count uids)])])))
+
+(defn use-presence-tracking! [doc-id]
+  ;; record this session in the document's presence store
+  (let [uid (db/get ::gh/user :uid)
+        doc-id (some-> doc-id fdb/munge)]
+    (h/use-effect (fn []
+                    (when (and doc-id uid)
+                      ;; a user can have multiple tabs/sessions open, so we track them independently
+                      ;; to avoid clobbering state (eg. tab A closes while tab B is still open)
+                      ;; {:presence {<doc-id> {<user-id> {<timestamp> true}}}}
+                      (let [ref (fdb/ref [:presence doc-id uid (js/Date.now)])]
+                        (-> (fdb/on-disconnect ref)
+                            (j/call :remove))
+                        (fdb/assoc-in! ref true)
+                        #(fdb/assoc-in! ref nil))))
+                  [doc-id uid])))
+
+(defn use-doc-menu-content [doc-id]
   (let [!content (ui/use-context ::menu/!content)]
     (h/use-effect
       (fn []
-        (let [content (v/x [menu/doc-menu id])]
+        (let [content (v/x
+                        [:<>
+                         [menu/doc-menu doc-id]
+                         [show-presence-avatars doc-id]])]
           (reset! !content content)
           #(swap! !content (fn [x]
                              (if (identical? x content)
                                nil
                                x)))))
-      [id])))
+      [doc-id])))
 
 (defn use-prose-view [{:keys [default-value on-change-state]} deps]
   (let [!ref (h/use-state nil)
@@ -130,7 +180,8 @@
   "Returns a ref for the element where the editor is to be mounted."
 
   (persist/use-persisted-file file)
-  (use-menubar-title-dropdown! id)
+  (use-presence-tracking! id)
+  (use-doc-menu-content id)
   (persist/use-recents! (::routes/path params) file)
 
   (let [autosave! (h/use-memo persist/autosave-local-fn)

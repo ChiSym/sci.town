@@ -22,7 +22,7 @@
 
 ;; Cells can have names, which we define using `defcell`. Let's re-make that timer cell, but this time we'll define a name for it.
 
-(defcell counter (interval 1000 inc))
+(defcell counter (interval 1000 inc 1))
 
 ;; By giving a cell a name, we can re-use it in other cells. This gives us tremendous power. Watch:
 
@@ -50,7 +50,7 @@
 
 ;; We'll start with a cell that is a random number generator:
 (defcell random-number []
-         (interval 200 #(rand-int 20)))
+         (interval 200 #(inc (rand-int 20))))
 
 ;; The `#` ("hash" or "pound sign") immediately before an open-parenthesis might be new to you. Go ahead and evaluate that subform, `#(rand-int 20)`, and you'll see it returns a function. That's all the `#` does: it's a quick way to define an anonymous function. This [shorthand](https://clojure.org/guides/weird_characters#__code_code_anonymous_function) is no different from `(fn [] ...)` except the arguments get automatic names like %1 and %2.
 

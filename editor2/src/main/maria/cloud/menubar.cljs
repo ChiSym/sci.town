@@ -182,9 +182,7 @@
        menubar-content
        [:a.flex.items-center.no-underline.menu-trigger.ml-auto
         {:href "https://github.com/probcomp/sci.town/issues"
-         :target "_blank"}
-        [:span.hidden.contents.sm:inline-flex "Bug Report"]
-        [:span.sm:invisible [icons/bug-ant "w-4 h-4"]]]
+         :target "_blank"} [icons/bug-ant "w-4 h-4"]]
        [command-bar/input]
        (if-let [{:keys [photo-url display-name]} (gh/get-user)]
          [menu [:el.menu-trigger.rounded-full menu/Trigger [avatar photo-url display-name]]
