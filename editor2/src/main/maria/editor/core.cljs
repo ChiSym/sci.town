@@ -7,6 +7,7 @@
             ["prosemirror-schema-list" :as cmd-list]
             ["react" :as react]
             ["react-dom" :as react-dom]
+            ["firebase/database" :as FDP]
             [applied-science.js-interop :as j]
             [applied-science.js-interop.alpha :refer [js]]
             [maria.cloud.firebase.database :as fdb]
@@ -185,12 +186,17 @@
   (persist/use-recents! (::routes/path params) file)
 
   (let [autosave! (h/use-memo persist/autosave-local-fn)
-        [ProseView ref-fn] (use-prose-view {:default-value (or (:file/source @(persist/local-ratom id))
-                                                               (:file/source file)
-                                                               "")
-                                            :on-change-state (fn [prev-state next-state]
-                                                               (autosave! id prev-state next-state))}
-                                           [])]
+        [ProseView ref-fn] (use-firebase-view {:id id
+                                               :plugins (plugins)})
+        ;; TODO
+        ;; bring back support for http/github/gist sources with local-only storage
+        ;; (use prosemirror-collab for storing steps?)
+        #_(use-prose-view {:default-value (or (:file/source @(persist/local-ratom id))
+                                              (:file/source file)
+                                              "")
+                           :on-change-state (fn [prev-state next-state]
+                                              (autosave! id prev-state next-state))}
+                          [])]
 
     ;; initialize new editors
     (h/use-effect

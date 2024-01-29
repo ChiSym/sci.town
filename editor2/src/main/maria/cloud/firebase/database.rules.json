@@ -3,6 +3,12 @@
   "rules": {
     ".read": true,
     ".write": false,
+    "prosemirror": {
+      "$doc": {
+        ".write": true,
+        ".read": true
+      }
+    },
     "presence": {
       "$doc": {
         "$user": {
