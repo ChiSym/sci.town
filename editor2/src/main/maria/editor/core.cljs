@@ -86,9 +86,9 @@
               (map (j/get :textContent)))
         (j/get-in doc [:content :content])))
 
-(ui/defview show-avatar [i uid]
+(ui/defview show-avatar [uid]
   (when-let [{:as foo :keys [avatar displayName]} (first (fdb/use-map [:profile uid]))]
-    [:img.w-5.h-5.rounded {:key i :src avatar :title displayName}]))
+    [:img.w-5.h-5.rounded {:key uid :src avatar :title displayName}]))
 
 (ui/defview show-presence-avatars [doc-id]
   ;; TODO
@@ -106,7 +106,7 @@
                       (take 2 uids)
                       uids)]
       [:div.flex.gap-1.items-center
-       (map-indexed show-avatar show-uids)
+       (doall (map show-avatar show-uids))
        (when overflow?
          [:div
           {:class ["bg-zinc-200 text-zinc-500"

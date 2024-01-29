@@ -40,11 +40,22 @@
          (show result)])]]))
 
 (v/defview show-gf [opts f]
+  ;; show an interactive simulator for the generative function.
+  ;; args & choice-map can be specified by typing into the text inputs.
+
+  ;; TBH unclear if this is a good idea, vs doing this explicitly in separate cells,
+  ;; but thought it's worth trying out (maybe useful for pedagogy, simple cases,
+  ;; looking at stuff on a phone, etc)
+
+  ;; further explorations should look at running simulations many times and showing
+  ;; charts/visualizations. At some point we would want to just use other notebook cells
+  ;; vs trying to cram things into the UI.
   (let [[result set-trace!] (h/use-state nil)
         [args-str set-args-str!] (h/use-state "")
         [choices-str set-choices-str!] (h/use-state "")
         run! (fn [^js e]
                (.preventDefault e)
+               ;; text input is evaluated in sci, so it can refer to variables in the notebook
                (try (let [argv (commands/code:eval-form-in-show opts (read-string args-str))
                           choice-map (when (seq choices-str)
                                        (commands/code:eval-form-in-show opts (dynamic.choice-map/choice-map (read-string choices-str))))]
@@ -72,12 +83,6 @@
        (when result
          [:div.mx-2.border.border-zinc-300.rounded-b.p-2
           (show/show opts (:value result result))])])))
-
-(comment
-  ;; in case we need to evaluate the generative function fully within the sci context of its definition:
-  (commands/code:eval-form-in-show opts
-                                   `(gf/simulate @~(:sci/root-value opts)
-                                                 ~(read-string (str "[" args "]")))))
 
 (comment
 
