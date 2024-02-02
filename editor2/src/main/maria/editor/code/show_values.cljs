@@ -306,9 +306,8 @@
 
 (defview show-cell [opts cell]
   ;; always watch status & value together, to avoid cell value being unwatched during loading/error states.
-  (let [{:keys [loading error]} (h/use-deref (cells.async/!status cell))
-        [cell-error value] (r/deref-result cell)
-        error (or error cell-error)]
+  (let [{:keys [loading]} (h/use-deref (cells.async/!loading? cell))
+        [error value] (r/deref-result cell)]
     (cond loading loader
           error (show-error opts error)
           #_cell-value-circle

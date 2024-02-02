@@ -44,6 +44,7 @@
         data-[delayed-open]:bg-zinc-200
         data-[state*=open]:bg-zinc-200
         cursor-default
+        flex items-center
     }
 
     .value-viewer {

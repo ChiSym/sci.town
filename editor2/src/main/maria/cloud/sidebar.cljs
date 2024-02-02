@@ -1,14 +1,12 @@
 (ns maria.cloud.sidebar
   (:require ["@radix-ui/react-accordion" :as acc]
-            [applied-science.js-interop :as j]
-            [clojure.string :as str]
-            [maria.cloud.github :as gh]
+            ["@radix-ui/react-dropdown-menu" :as Dropdown]
+            [maria.cloud.auth :as auth]
+            [maria.cloud.firebase.database :as fdb]
             [maria.cloud.persistence :as persist]
             [maria.cloud.routes :as routes]
             [maria.editor.icons :as icons]
-            [maria.editor.util :as u]
             [maria.ui :as ui]
-            [promesa.core :as p]
             [re-db.api :as db]
             [re-db.hooks :as hooks]
             [yawn.view :as v]))
@@ -30,8 +28,8 @@
      content]))
 
 (def acc-item (v/from-element :a.block
-                              {:class ["text-sm text-black no-underline"
-                                       "pr-2 pl-4 mx-1 py-1 rounded cursor-default"
+                              {:class ["text-sm text-black no-underline flex gap-1"
+                                       "pr-2 pl-4 mx-1 h-7 truncate items-center rounded cursor-default"
                                        "hover:bg-black/5 hover:text-black visited:text-black"
                                        "data-[selected=true]:bg-sky-500 data-[selected=true]:text-white"]}))
 
@@ -44,38 +42,62 @@
    {:value title
     :class ui/c:divider}
    [:> acc/Header
-    {:class "flex flex-row h-[40px] m-0"}
+    {:class "flex flex-row h-[40px] m-0 group "}
     [:> acc/Trigger {:class "text-sm font-bold p-2 AccordionTrigger flex-grow"}
-     [icons/chevron-right:mini "w-4 h-4 -ml-1 AccordionChevron"]
+     [icons/chevron-right:mini "w-4 h-4 -ml-1 AccordionChevron text-gray-500 group-hover:text-black"]
      title]]
    (into [:el.flex.flex-col.gap-1 acc/Content] items)])
 
-(ui/defview recents [current-path]
-  (when-let [recents (seq @persist/!recents)]
-    [acc-section "Recently Viewed"
-     (for [{:keys [maria/path file/id file/title]} recents]
-       [acc-item (acc-props (= current-path path)
-                            {:key id
-                             :href path})
-        title])]))
+(defn file->path [{:as file :keys [file/provider]}]
+  (when file
+    (case provider
+      :file.provider/prosemirror-firebase (routes/path-for 'maria.cloud.views/firebase {:doc/id (:file/id file)})
+      :file.provider/curriculum (routes/path-for 'maria.cloud.views/curriculum file))))
 
-(ui/defview user-gist-list [{:keys [username current-path]}]
-  (let [gists (u/use-promise #(p/-> (u/fetch (str "https://api.github.com/users/" username "/gists")
-                                             :headers (merge {:Content-Type "text/plain"}
-                                                             (gh/auth-headers)))
-                                    (j/call :json))
-                             [username])]
-    [acc-section "My Gists"
-     (for [{:keys [file/name :gist/id :gist/description]} (keep gh/parse-gist gists)]
-       (v/x [acc-item {:href (routes/path-for 'maria.cloud.views/gist
-                                              {:gist/id id})
-                       :key id}
-             (or (some-> description
-                         str/trim
-                         (str/split-lines)
-                         first
-                         (u/guard (complement str/blank?)))
-                 name)]))]))
+(ui/defview recently-viewed [current-path]
+  (when-let [user-id (db/get ::auth/user :uid)]
+    (when-let [visited @(fdb/$value [:fire/query [:visited user-id]
+                                     [:orderByChild :-ts]])]
+      [acc-section "Recently Viewed"
+       (doall
+         (for [[id foo] (sort-by (comp :-ts val) visited)
+               :let [doc (or @(persist/$doc id)
+                             (db/get [:file/id (fdb/demunge (name id))]))]
+               :when doc
+               :let [path (file->path doc)]]
+           [acc-item (acc-props (= current-path path)
+                                {:key id
+                                 :href path})
+            (:file/title doc)]))])))
+
+(defn dropdown [trigger & items]
+  (v/x [:el Dropdown/Root
+        [:el Dropdown/Trigger {:as-child true} trigger]
+        [:el Dropdown/Portal
+         (into [:el.rounded.bg-white.p-2 Dropdown/Content] items)]]))
+
+(defn dropdown-item [{:keys [href on-click label]}]
+  [:el Dropdown/Item {:as-child true}
+   [(if href :a :div)
+    {:href href :on-click on-click}
+    label]])
+
+(ui/defview my-docs [current-path]
+  (when-let [docs (seq (persist/$my-firebase-docs))]
+    [acc-section "My Docs"
+     (for [{:file/keys [id title]} docs
+           :let [href (routes/path-for 'maria.cloud.views/firebase {:doc/id id})]]
+       [acc-item {:href href
+                  :key id}
+        title]
+       #_[dropdown
+          [acc-item {:href href
+                     :key id}
+           title]
+          [dropdown-item {:on-click #(do
+                                       (when (= href current-path)
+                                         (routes/navigate! 'maria.cloud.pages.landing/page))
+                                       (persist/delete-doc! id))}]])]))
 
 (ui/defview curriculum-list [current-path]
   [acc-section "Curriculum"
@@ -106,12 +128,7 @@
        {:on-click #(swap! ui/!state assoc :sidebar/visible? false)
         :style {:margin-top 3}}
        [icons/x-mark:mini "w-5 h-5 rotate-180"]]
-      [:div.flex-grow]
-      [:a.px-3.flex.items-center.icon-zinc {:href "/"} [icons/home "w-5 h-5"]]]
-
-     [recents current-path]
-     [curriculum-list current-path]
-
-     (when-let [username (:username (gh/get-user))]
-       (user-gist-list {:username username
-                        :current-path current-path}))]))
+      [:div.flex-grow]]
+     [my-docs current-path]
+     [recently-viewed current-path]
+     [curriculum-list current-path]]))

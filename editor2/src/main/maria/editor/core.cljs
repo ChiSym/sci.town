@@ -10,10 +10,11 @@
             ["firebase/database" :as FDP]
             [applied-science.js-interop :as j]
             [applied-science.js-interop.alpha :refer [js]]
-            [maria.cloud.firebase.database :as fdb]
-            [maria.cloud.github :as gh]
+            [clojure.string :as str]
+            [maria.cloud.firebase.prosemirror :refer [use-firebase-view]]
             [maria.cloud.menubar :as menu]
             [maria.cloud.persistence :as persist]
+            [maria.cloud.presence :as presence]
             [maria.cloud.routes :as routes]
             [maria.editor.code.NodeView :as NodeView]
             [maria.editor.code.commands :as commands]
@@ -25,7 +26,6 @@
             [maria.editor.prosemirror.schema :as schema]
             [maria.editor.util :as u]
             [maria.ui :as ui]
-            [re-db.api :as db]
             [yawn.hooks :as h]
             [yawn.view :as v]))
 
@@ -87,50 +87,6 @@
               (map (j/get :textContent)))
         (j/get-in doc [:content :content])))
 
-(ui/defview show-avatar [uid]
-  (when-let [{:as foo :keys [avatar displayName]} (first (fdb/use-map [:profile uid]))]
-    [:img.w-5.h-5.rounded {:key uid :src avatar :title displayName}]))
-
-(ui/defview show-presence-avatars [doc-id]
-  ;; TODO
-  ;; - on hover, show the full list in a popover
-  ;; - if user has no avatar, show initials
-  (when-let [uids (some->> (fdb/use-map [:presence (fdb/munge doc-id)])
-                           first
-                           (sort-by (fn [a b] (compare b a)) val)
-                           (map (comp name key))
-                           ;; comment this to show current user, for testing
-                           (remove #{(db/get ::gh/user :uid)})
-                           (take 3))]
-    (let [overflow? (> (count uids) 2)
-          show-uids (if overflow?
-                      (take 2 uids)
-                      uids)]
-      [:div.flex.gap-1.items-center
-       (doall (map show-avatar show-uids))
-       (when overflow?
-         [:div
-          {:class ["bg-zinc-200 text-zinc-500"
-                   "text-xs font-semibold"
-                   "w-5 h-5 rounded"
-                   "inline-flex items-center justify-center"]}
-          (count uids)])])))
-
-(defn use-presence-tracking! [doc-id]
-  ;; record this session in the document's presence store
-  (let [uid (db/get ::gh/user :uid)
-        doc-id (some-> doc-id fdb/munge)]
-    (h/use-effect (fn []
-                    (when (and doc-id uid)
-                      ;; a user can have multiple tabs/sessions open, so we track them independently
-                      ;; to avoid clobbering state (eg. tab A closes while tab B is still open)
-                      ;; {:presence {<doc-id> {<user-id> {<timestamp> true}}}}
-                      (let [ref (fdb/ref [:presence doc-id uid (js/Date.now)])]
-                        (-> (fdb/on-disconnect ref)
-                            (j/call :remove))
-                        (fdb/assoc-in! ref true)
-                        #(fdb/assoc-in! ref nil))))
-                  [doc-id uid])))
 
 (defn use-doc-menu-content [doc-id]
   (let [!content (ui/use-context ::menu/!content)]
@@ -139,7 +95,8 @@
         (let [content (v/x
                         [:<>
                          [menu/doc-menu doc-id]
-                         [show-presence-avatars doc-id]])]
+                         [:div.flex-auto]
+                         [presence/show-presence-avatars doc-id]])]
           (reset! !content content)
           #(swap! !content (fn [x]
                              (if (identical? x content)
@@ -177,34 +134,36 @@
       (conj deps @!ref))
     [@!prose-view ref-fn]))
 
-(ui/defview editor* [params {:as file :keys [file/id]}]
+(ui/defview editor*
+  {:key (fn [params file] (:file/provider file))}
+  [params {:as file :keys [file/id file/provider]}]
   "Returns a ref for the element where the editor is to be mounted."
 
-  (persist/use-persisted-file file)
-  (use-presence-tracking! id)
+  (persist/use-readonly-file file)
+  (presence/track-doc-presence! id)
   (use-doc-menu-content id)
-  (persist/use-recents! (::routes/path params) file)
 
   (let [autosave! (h/use-memo persist/autosave-local-fn)
-        [ProseView ref-fn] (use-firebase-view {:id id
-                                               :plugins (plugins)})
-        ;; TODO
-        ;; bring back support for http/github/gist sources with local-only storage
-        ;; (use prosemirror-collab for storing steps?)
-        #_(use-prose-view {:default-value (or (:file/source @(persist/local-ratom id))
-                                              (:file/source file)
-                                              "")
-                           :on-change-state (fn [prev-state next-state]
-                                              (autosave! id prev-state next-state))}
-                          [])]
+        [ProseView ref-fn] (case provider
+
+                             :file.provider/prosemirror-firebase
+                             (use-firebase-view {:id id
+                                                 :plugins (plugins)})
+
+                             (use-prose-view {:default-value (or (:file/source @(persist/local-ratom id))
+                                                                 (:file/source file)
+                                                                 "")
+                                              :on-change-state (fn [prev-state next-state]
+                                                                 (autosave! id prev-state next-state))}
+                                             []))]
 
     ;; initialize new editors
     (h/use-effect
       (fn []
         (when (some-> ProseView (u/guard (complement (j/get :isDestroyed))))
-
           (keymaps/add-context :ProseView ProseView)
-          (commands/prose:eval-prose-view! ProseView)
+          (when-not (str/includes? js/window.location.href "eval=false")
+            (commands/prose:eval-prose-view! ProseView))
           (j/call ProseView :focus)))
       [ProseView])
 
@@ -219,4 +178,4 @@
   [params file]
   (if file
     [editor* params file]
-    "Loading..."))
+    [:div.circle-loading.m-2 [:div] [:div]]))

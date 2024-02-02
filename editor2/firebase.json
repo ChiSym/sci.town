@@ -14,6 +14,6 @@
     ]
   },
   "database": {
-    "rules": "src/main/maria/cloud/firebase/database.rules.json"
+    "rules": "src/main/database.rules.json"
   }
 }

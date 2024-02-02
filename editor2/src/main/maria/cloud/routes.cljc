@@ -22,6 +22,7 @@
        {"" 'maria.cloud.pages.landing/page
         ["curriculum/" :curriculum/name] 'maria.cloud.views/curriculum
         ["gist/" :gist/id] 'maria.cloud.views/gist
+        ["fire/" :doc/id] 'maria.cloud.views/firebase
         ["local/" :local/id] 'maria.cloud.views/local
         ["http-text/" [#".*" :url]] 'maria.cloud.views/http-text
         "intro" [::redirect "/curriculum/clojure-with-shapes"]}])))

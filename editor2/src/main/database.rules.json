@@ -1,0 +1,141 @@
+// firebase pre-processes database rules to allow comments and newlines in json
+// https://firebase.google.com/docs/reference/security/database
+// https://firebase.google.com/docs/rules/rules-language
+
+{
+  "rules": {
+    ".read": true,
+    ".write": false,
+    // doc/$doc stores metadata like title, visibility, etc.
+    "doc": {
+      ".indexOn": ["owner"],
+      "$doc": {
+        // read if doc is public or user has any role
+        ".read": "data.child('visibility').val() === 'public' || root.child('roles/by-user').child(auth.uid).child($doc).exists()",
+        // create if: user is an admin.
+        // update if: user is an editor.
+        // delete if: user is admin.
+        ".write": "
+                   // create
+                   !data.exists() && 
+                   newData.parent().parent().child('roles/by-user').child(auth.uid).child($doc).val() === 'admin' && 
+                   newData.child('owner').val() === auth.uid || 
+                   // update
+                   newData.exists() && root.child('roles/by-user').child(auth.uid).child($doc).val().matches(/^(admin|writer)$/) ||
+                   // delete
+                  !newData.exists() && root.child('roles/by-user').child(auth.uid).child($doc).val() == 'admin'",
+        ".validate": "newData.hasChildren(['owner', 'title', 'visibility', 'created-at', 'provider'])",
+        "created-at": {
+          ".validate": "data.exists() || newData.val() === now"
+        },
+        "title": {
+          ".validate": "newData.isString()"
+        },
+        "namespace": {
+          ".validate": "newData.val().matches(/^[a-z0-9-]+$/)"
+        },
+        "language": {
+          ".validate": "newData.isString()"
+        },
+        "provider": {
+          // value is one of ['prosemirror-firebase']
+          ".validate": "newData.val().matches(/^(prosemirror-firebase)$/)"
+        },
+        "visibility": {
+          ".validate": "newData.val().matches(/^(public|private)$/)"
+        }
+      }
+    },
+    // visitors/$doc/$user keeps track of users' visits to a doc. 
+    // -ts is a negative timestamp (to sort by most recent visit)
+    "visitors": {
+      "$doc": {
+        ".indexOn": [
+          "-ts"
+        ],
+        // delete if doc is also being deleted
+        ".write": "!newData.exists() && !newData.parent().parent().child('doc/' + $doc).exists()",
+        "$user": {
+          ".write": "$user === auth.uid",
+          ".validate": "newData.hasChildren(['-ts']) && newData.child('-ts').isNumber()",
+          "online": {
+            ".validate": "newData.hasChildren()"
+          }
+        }
+      }
+    },
+    // visited/$user/$doc keeps track of visits, indexed by user.
+    // this is useful for showing a list of recently visited docs.
+    "visited": {
+      "$user": {
+        ".read": "$user === auth.uid",
+        "$doc": {
+          // write if: user can view this doc
+          // remove if: user is admin of this doc
+          ".write": "// write if: user can view this doc
+                     ($user === auth.uid && 
+                     (root.child('doc').child($doc).child('visibility').val() === 'public' ||
+                     root.child('roles/by-user').child($user).child($doc).exists())) || 
+                     // write if: this doc does not exist in firebase (eg. curriculum)
+                      ($user === auth.uid && !root.child('doc').child($doc).exists()) ||
+                     // remove if: user is admin of this doc 
+                      (root.child('roles/by-user').child($user).child($doc).val() === 'admin')",        
+          // -ts is a negative timestamp (to sort by most recent visit)
+          ".validate": "newData.child('-ts').isNumber()",
+          
+          
+        }
+      }
+    },
+    // roles are stored by-user and by-doc to make it possible to query in both directions:
+    // - all docs a user has a role in,
+    // - all users involved with a doc.
+    "roles": {
+      "by-user": {
+        "$user": {
+          "$doc": {
+            // create if user is becoming an admin
+            // update if admin
+            // delete if doc is also being deleted
+            ".write": "!root.child('doc').child($doc).exists() && newData.val() == 'admin' && $user === auth.uid || data.parent().child(auth.uid).val() === 'admin' || !newData.exists() && !newData.parent().parent().parent().parent().child('doc').child($doc).exists()",
+            ".validate": "newData.val().matches(/^(reader|writer|admin)$/) && newData.val() == newData.parent().parent().parent().child('by-doc').child($doc).child($user).val()"
+          }
+        }
+      },
+      "by-doc": {
+        "$doc": {
+          // delete if doc is also being deleted
+          ".write": "!newData.exists() && !newData.parent().parent().parent().child('doc').child($doc).exists()",
+          "$user": {
+            ".write": true,
+            ".validate": "newData.val() == newData.parent().parent().parent().child('by-user').child($user).child($doc).val()"
+          }
+        }
+      }
+    },
+    // /prosemirror is where doc content & real-time editing lives
+    "prosemirror": {
+      "$doc": {
+        // read if: doc is public or user has any role
+        ".read": "root.child('doc/' + $doc + '/meta/visibility').val() === 'public' || root.child('doc/' + $doc + '/roles/' + auth.uid).exists()",
+        // update if: user is an editor.
+        ".write": "root.child('roles/by-user').child(auth.uid).child($doc).val().matches(/^(admin|writer)$/)",
+        "selections": {
+          "$user": {
+            // write if: user is an editor.
+            ".write": "$user === auth.uid && root.child('roles/by-user').child(auth.uid).child($doc).val().matches(/^(admin|writer)$/)"
+          }
+        }
+      }
+    },
+    // profile is where user's avatar & display name are stored
+    "profile": {
+      "$user": {
+        // only user can write their profile
+        ".write": "$user === auth.uid",
+        // profile is an object which can only contain avatar (image url) & displayName (string)
+        ".validate": "newData.hasChildren(['avatar', 'displayName']) && newData.child('avatar').isString() && newData.child('displayName').isString()"
+      }
+    }
+  }
+}

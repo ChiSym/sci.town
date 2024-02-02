@@ -1,7 +1,6 @@
 (ns maria.cloud.views
   (:require [applied-science.js-interop :as j]
             [clojure.string :as str]
-            [maria.cloud.github :as gh]
             [maria.cloud.routes :as routes]
             [maria.editor.core :as editor.core]
             [maria.editor.util :as u]
@@ -12,11 +11,10 @@
             [yawn.hooks :as h]
             [yawn.view :as y]
             [maria.cloud.persistence :as persist]
-            [maria.editor.code.show-values :as show]))
+            [maria.editor.code.show-values :as show]
+            [maria.cloud.firebase.database :as fdb]
+            [maria.cloud.persistence.github :as gh]))
 
-;;
-;; - when viewing a doc, save it to recents
-;; -
 
 (comment
   (j/defn prose:eval-clojure! [ctx ^js doc]
@@ -65,12 +63,22 @@
 (ui/defview gist
   {:key :gist/id}
   [{:as params gist-id :gist/id}]
-  (let [file (u/use-promise #(p/-> (u/fetch (str "https://api.github.com/gists/" gist-id)
-                                            :headers (gh/auth-headers))
+  (let [file (u/use-promise #(p/-> (u/fetch (str "https://api.github.com/gists/" gist-id))
                                    (j/call :json)
                                    gh/parse-gist)
                             [gist-id])]
     [editor.core/editor params file]))
+
+(ui/defview firebase
+  {:key :doc/id}
+  [{:as params :keys [doc/id]}]
+  ;; should be: namespace
+  (let [{:keys [title filename language]} @(fdb/$value [:doc id])]
+    [editor.core/editor params {:file/id id
+                                :file/title title
+                                :file/name filename
+                                :file/language language
+                                :file/provider :file.provider/prosemirror-firebase}]))
 
 (defn local-file [id]
   {:file/id id

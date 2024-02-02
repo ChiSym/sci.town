@@ -12,6 +12,11 @@ A multiplayer notebook for exploratory learning and teaching in probabilistic co
 Third party libraries currently require a PR to this repo. See `maria.editor.extensions.config`
 and other namespaces in `maria.editor.extensions` for examples.
 
+## Conventions 
+
+- functions that return promises end with `+`, like `fetch-doc+`
+- mutable things start with `!`, like `!state`
+
 ## Credits 
 
 This software is a fork of [Maria.cloud](https://maria.cloud), a collaborative work by [@daveliepmann](https://twitter.com/daveliepmann), [@jackrusher](https://twitter.com/jackrusher), and [@mhuebert](https://twitter.com/mhuebert) (see MARIA.md) 

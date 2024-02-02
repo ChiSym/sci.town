@@ -4,7 +4,7 @@
             ["prosemirror-state" :as p.state]
             [applied-science.js-interop :as j]
             [applied-science.js-interop.alpha :refer [js]]
-            [maria.cloud.github :as gh]
+            [maria.cloud.auth :as auth]
             [maria.cloud.firebase.database :as fdb]
             [maria.editor.code.NodeView :as NodeView]
             [maria.editor.code.sci :as sci]
@@ -29,15 +29,16 @@
 ;;   - these are "editable" but persist only to localStorage
 ;;     "Save...", pick a name, it goes into your profile and is now managed in Firebase.
 
-;; - add "Copy source" and "Copy as Markdown" commands
+;; - add "Copy as Markdown" commands
 
 (defn use-firebase-view [{:keys [id plugins]}]
   (let [!ref (h/use-state nil)
         ref-fn (h/use-callback #(when % (reset! !ref %)))
         !prose-view (h/use-state nil)
         !promises-ref (h/use-ref {})
-        firebase-ref (fdb/ref [:prosemirror (fdb/munge id)])
-        client-id (db/get ::gh/user :uid)
+        firebase-ref (fdb/ref [:prosemirror id])
+        ;; client-id should be unique per tab but include the user's id
+        client-id (str (db/get ::auth/user :uid) ":" (js/Date.now))
         make-prose-view
         (fn [element]
           (js (new FirebaseEditor
