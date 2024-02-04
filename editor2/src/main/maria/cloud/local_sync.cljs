@@ -7,9 +7,15 @@
 (defn db-id [id] {:entity/local id})
 
 (def sync-entity!
+  ;; TODO
+  ;; don't use this for doc localStorage?
+  ;; be more specific..
+  ;; - store the id, provider, & hash of source at time first local snapshot was taken
+  ;;
   (memoize (fn [id]
              (let [db-id (db-id id)]
                (when-let [init (local/get db-id)]
+                 (prn :sync-entity-init init)
                  (db/transact! [(assoc init :db/id db-id)]))
                (r/reaction!
                  (local/put! db-id (db/get db-id)))))))

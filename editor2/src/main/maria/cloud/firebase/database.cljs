@@ -100,7 +100,7 @@
   Paths may be strings, keywords or vectors of strings/keywords."
   ([m] (update+ (DB/ref @!db) m))
   ([path m]
-   (log/trace :update+ {:path path :update m})
+   ;(log/trace :update+ {:path path :update m})
    (DB/update (ref path) (format-update m))))
 
 (def push (comp DB/push ref))

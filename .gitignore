@@ -16,3 +16,4 @@ package-lock.json
 **/public/css
 **/public/js
 .nrepl-port
+.lsp

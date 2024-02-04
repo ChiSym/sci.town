@@ -42,7 +42,9 @@
           ".validate": "newData.val().matches(/^(prosemirror-firebase)$/)"
         },
         "visibility": {
-          ".validate": "newData.val().matches(/^(public|private)$/)"
+        // use 'link' visibility to determine what docs are visible
+        // on a user's profile
+          ".validate": "newData.val().matches(/^(public|private|link)$/)"
         }
       }
     },
@@ -119,7 +121,12 @@
         // read if: doc is public or user has any role
         ".read": "root.child('doc/' + $doc + '/meta/visibility').val() === 'public' || root.child('doc/' + $doc + '/roles/' + auth.uid).exists()",
         // update if: user is an editor.
-        ".write": "root.child('roles/by-user').child(auth.uid).child($doc).val().matches(/^(admin|writer)$/)",
+        ".write": "
+        // create if: user is owner 
+        !data.exists() && newData.parent().parent().child('doc').child($doc).child('owner').val() === auth.uid || 
+        // update if: user is editor 
+        root.child('roles/by-user').child(auth.uid).child($doc).val().matches(/^(admin|writer)$/)
+        ",
         "selections": {
           "$user": {
             // write if: user is an editor.

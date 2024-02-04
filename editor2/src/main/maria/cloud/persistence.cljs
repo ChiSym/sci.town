@@ -1,5 +1,7 @@
 (ns maria.cloud.persistence
-  (:require [applied-science.js-interop :as j]
+  (:require ["prosemirror-compress" :as pm-compress]
+            ["prosemirror-state$EditorState" :as EditorState]
+            [applied-science.js-interop :as j]
             [goog.functions :as gf]
             [lambdaisland.glogi :as log]
             [maria.cloud.auth :as auth]
@@ -8,8 +10,10 @@
             [maria.cloud.local-sync :as local-sync]
             [maria.cloud.routes :as routes]
             [maria.editor.code.commands :as commands]
+            [maria.editor.code.parse-clj :as parse-clj]
             [maria.editor.doc :as doc]
             [maria.editor.keymaps :as keymaps]
+            [maria.editor.prosemirror.schema :as schema]
             [maria.editor.util :as u]
             [promesa.core :as p]
             [re-db.api :as db]
@@ -106,19 +110,27 @@
                     (reset! (readonly-ratom id) file)))
                 [id source]))
 
-(defn new-firebase-doc! [& {:keys [title language content]}]
-  ;; TODO
-  ;; - figure out how to put content into firebase doc
+(defn new-firebase-doc! [& {:as opts :keys [title language content prosemirror/state]}]
   (when-let [user-id (db/get ::auth/user :uid)]
-    (let [ref (fdb/push [:doc])
+    (let [checkpoint (when-let [state (or state
+                                          (some-> content
+                                                  parse-clj/clojure->markdown
+                                                  schema/markdown->doc
+                                                  (as-> doc (EditorState/create #js{:doc doc}))))]
+                       (-> (j/call state :toJSON)
+                           pm-compress/compressStateJSON
+                           (j/assoc! :k 0 :t fdb/TIMESTAMP)))
+          ref (fdb/push [:doc])
           doc-id (j/get ref :key)
-          new-doc {[:doc doc-id] {:title (or title "Untitled")
-                                  :owner user-id
-                                  :visibility "private"
-                                  :provider "prosemirror-firebase"
-                                  :created-at fdb/TIMESTAMP}
-                   [:roles :by-user user-id doc-id] "admin"
-                   [:roles :by-doc doc-id user-id] "admin"}]
+          new-doc (merge {[:doc doc-id] {:title (or title "Untitled")
+                                         :owner user-id
+                                         :visibility "link"
+                                         :provider "prosemirror-firebase"
+                                         :created-at fdb/TIMESTAMP}
+                          [:roles :by-user user-id doc-id] "admin"
+                          [:roles :by-doc doc-id user-id] "admin"}
+                         (when checkpoint
+                           {[:prosemirror doc-id :checkpoint] checkpoint}))]
       (log/trace "Creating new firebase doc" new-doc)
       (p/do (fdb/update+ new-doc)
             (routes/navigate! 'maria.cloud.views/firebase {:doc/id doc-id})))))
@@ -151,7 +163,11 @@
           :created-at created-at}))
 
 (defn $doc [id]
-  ;; todo - check for  (db/get [:file/id (fdb/demunge (name id))]) first
+  ;; todo
+  ;; - standardize how readonly files are stored (should be in db under :file/id)
+  ;;   and return that here (if it exists)
+  ;; - currently we can't do (or db-value fire-value) because some existing
+  ;;   local-storage code writes blank entries for every id to re-db
   (r/reaction
     (some->>
       @(fdb/$value [:doc id])
@@ -170,24 +186,17 @@
 ;; X only allow changing file title for firebase docs.
 ;; X handle changes to doc names on blur
 ;; X parse-firebase-doc into common file/* format for use in editor
-;; - read gists using public url (plain http) if possible
-;; - clarify the supported persistence modes and how they interact
-;;   - show gist titles in the menubar
-;;   - get rid of "persisted-ratom"? fetch persisted state via use-promise and pass down the tree.
+;; - add "forked-from" key to doc/meta when making a copy of a doc
+;; - improve local storage...
+;;   - save to localStorage on checkpoint
+;;   - use browser visibility api to save state on close,
+;;   - indicate clearly in the menubar "Local changes"
+;;   - review the api...
+;;   X allow saving to firebase
+;; - fix gists...
+;;   - fetch from github reliably (via public url if possible)
+;; - do the extract-filename thing again to set titles in firebase docs
 ;;     - local-ratom can still be used to persist local changes.
-;; - do the extract-filename thing when moving out of a code cell in an untitled doc?
-;; - create new firebase doc with existing content. then,
-;;   - duplicate/make-a-copy/fork/remix = create a new firebase doc with the same content, add a "forked-from" key to doc/meta.
-;; - when viewing a readonly doc,
-;;   - start by persisting locally,
-;;   - show "Local changes" in menu,
-;;   - allow saving to firebase
-
-
-;; Behaviour Design
-;;
-;;
-;;
 
 (keymaps/register-commands!
   {:file/new {:bindings [:Shift-Mod-b]
@@ -198,13 +207,13 @@
    :file/delete {:f (fn [{:keys [file/id]}]
                       (routes/navigate! 'maria.cloud.pages.landing/page)
                       (delete-doc! id))}
-   :file/duplicate {:when (every-pred :file/id :ProseView)
-                    ;; create a new gist with contents of current doc.
-                    :f (fn [{:keys [ProseView file/id]}]
-                         (let [source (state-source (j/get ProseView :state))]
-                           (new-firebase-doc! {:file/source source
-                                               :file/name (some-> (:file/name (current-file id))
-                                                                  (swap-name (partial str "copy_of_")))})))}
+   :file/save-a-copy {:when (every-pred :file/id :ProseView)
+                      :f (fn [{:keys [ProseView file/id]}]
+                           (let [file (or @($doc id)
+                                          (db/get [:file/id id]))]
+                             (new-firebase-doc! {:prosemirror/state (j/get ProseView :state)
+                                                 :title (some->> (:file/title file)
+                                                                 (str "Copy of "))})))}
    :file/revert {:when (comp seq changes :file/id)
                  :f (fn [{:keys [file/id ProseView]}]
                       (j/let [source (:file/source @(readonly-ratom id))]
