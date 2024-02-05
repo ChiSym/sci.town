@@ -102,7 +102,7 @@
     @apply list-disc;
 }
 
-.ProseMirror li > p:first-child, .ProseMirror li > ul:first-child {
+.ProseMirror li > p:first-child, .ProseMirror li > ul {
     @apply mt-0;
 }
 
