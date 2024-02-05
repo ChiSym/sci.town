@@ -67,7 +67,7 @@
   (let [file (u/use-promise #(p/-> (u/fetch (str "https://api.github.com/gists/" gist-id))
                                    (j/call :json)
                                    gh/parse-gist
-                                   (fn [file] (db/transact! [file])))
+                                   (doto (-> vector db/transact!)))
                             [gist-id])]
     [editor.core/editor params file]))
 
@@ -85,9 +85,9 @@
                      (str "https://"))
         file (u/use-promise #(p/let [source (p/-> (u/fetch url)
                                                   (j/call :text))
-                                     file  {:file/id url
-                                            :http-text/url url
-                                            :file/source source}]
+                                     file {:file/id url
+                                           :http-text/url url
+                                           :file/source source}]
                                (db/transact! [file])
                                file)
                             [url])]
