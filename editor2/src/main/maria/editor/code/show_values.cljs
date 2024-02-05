@@ -131,7 +131,7 @@
 
 (defview more-btn [on-click]
   [:div.inline-block.-mt-1 {:on-click on-click}
-   (icons/ellipsis:mini "w-4 h-4 cursor-pointer ")])
+   (icons/ellipsis-circle:mini "w-4 h-4 cursor-pointer ")])
 
 (defn punctuate ^v/el [s]
   (v/x [:div.inline-block s]))

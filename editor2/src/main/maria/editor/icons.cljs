@@ -35,9 +35,13 @@
   (v/x [:svg {:class class :xmlns "http://www.w3.org/2000/svg" :fill "none" :viewBox "0 0 24 24" :strokeWidth "{1.5}" :stroke "currentColor"}
         [:path {:strokeLinecap "round" :strokeLinejoin "round" :d "M4.5 12.75l6 6 9-13.5"}]]))
 
-(defn ellipsis:mini [class]
+(defn ellipsis-circle:mini [class]
   (v/x [:svg {:class class :xmlns "http://www.w3.org/2000/svg" :viewBox "0 0 20 20" :fill "currentColor"}
         [:path {:fillRule "evenodd" :d "M2 10a8 8 0 1116 0 8 8 0 01-16 0zm8 1a1 1 0 100-2 1 1 0 000 2zm-3-1a1 1 0 11-2 0 1 1 0 012 0zm7 1a1 1 0 100-2 1 1 0 000 2z" :clipRule "evenodd"}]]))
+
+(defn ellipsis:mini [class]
+  (v/x [:svg.icon {:class class :xmlns "http://www.w3.org/2000/svg" :viewBox "0 0 20 20" :fill "currentColor"}
+        [:path {:d "M3 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM8.5 10a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM15.5 8.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"}]]))
 
 (defn chevron-down:mini [class]
   (v/x [:svg {:class class :xmlns "http://www.w3.org/2000/svg" :viewBox "0 0 20 20" :fill "currentColor"}

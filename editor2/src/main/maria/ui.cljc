@@ -19,7 +19,7 @@
 (def default-state {:sidebar/visible? false
                     :sidebar/width 250
                     :sidebar/transition "all 0.2s ease 0s"
-                    :sidebar/open #{"curriculum"}})
+                    :sidebar/open #{"Recently Viewed"}})
 
 #?(:cljs
    (defonce !state (local/ratom ::state default-state)))

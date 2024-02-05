@@ -8,6 +8,7 @@
             [maria.ui :as ui]
             [re-db.api :as db]
             [re-db.hooks :as hooks]
+            [yawn.hooks :as h]
             [yawn.view :as v]))
 
 (defn sidebar-width []
@@ -26,26 +27,36 @@
       [:div.flex-grow.overflow-y-auto sidebar]]
      content]))
 
-(def acc-item (v/from-element :a.block
-                              {:class ["text-sm text-black no-underline flex gap-1"
-                                       "pr-2 pl-4 mx-1 h-7 truncate items-center rounded cursor-default"
-                                       "hover:bg-black/5 hover:text-black visited:text-black"
-                                       "data-[selected=true]:bg-sky-500 data-[selected=true]:text-white"]}))
-
 (defn acc-props [current? props]
   (merge {:data-selected current?}
          props))
 
-(ui/defview acc-section [title items]
+(def acc-item (v/from-element :a.block
+                              {:class ["text-sm text-black no-underline flex gap-1 last:mb-1"
+                                       "pr-2 pl-5 mx-1 h-7 truncate items-center rounded cursor-default"
+                                       "hover:bg-black/5 hover:text-black visited:text-black"
+                                       "data-[selected=true]:bg-sky-500 data-[selected=true]:text-white"]}))
+
+(defn use-acc-limit [limit items]
+  (let [!expanded? (h/use-state false)]
+    (if (and (not @!expanded?)
+             (> (count items) limit))
+      (concat (take limit items)
+              [[acc-item {:on-click #(swap! !expanded? true)} [icons/ellipsis:mini "text-zinc-400 w-4 h-4"]]])
+      items)))
+
+(ui/defview acc-section [{:keys [title
+                                 limit]
+                          :or {limit 20}} items]
   [:> acc/Item
    {:value title
     :class ui/c:divider}
    [:> acc/Header
-    {:class "flex flex-row h-[40px] m-0 group "}
-    [:> acc/Trigger {:class "text-sm font-bold p-2 AccordionTrigger flex-grow"}
-     [icons/chevron-right:mini "w-4 h-4 -ml-1 AccordionChevron text-gray-500 group-hover:text-black"]
+    {:class "flex flex-row h-[40px] mt-0 group "}
+    [:> acc/Trigger {:class "text-sm font-bold AccordionTrigger flex-grow flex items-center"}
+     [icons/chevron-right:mini "mx-1 w-4 h-4 flex items-center justify-center AccordionChevron text-gray-500 group-hover:text-black"]
      title]]
-   (into [:el.flex.flex-col.gap-1 acc/Content] items)])
+   (into [:el.flex.flex-col.gap-1 acc/Content] (use-acc-limit limit items))])
 
 (defn file->path [{:as file :keys [file/provider]}]
   (when file
@@ -59,7 +70,7 @@
   (when-let [user-id (db/get ::auth/user :uid)]
     (when-let [visited @(fdb/$value [:fire/query [:visited user-id]
                                      [:orderByChild :-ts]])]
-      [acc-section "Recently Viewed"
+      [acc-section {:title "Recently Viewed" :limit 3}
        (doall
          (for [[id foo] (sort-by (comp :-ts val) visited)
                :let [doc @(persist/$doc id)]
@@ -72,7 +83,7 @@
 
 (ui/defview my-docs [current-path]
   (when-let [docs (seq (persist/$my-docs))]
-    [acc-section "My Docs"
+    [acc-section {:title "My Docs"}
      (for [{:file/keys [id title]} docs
            :let [href (routes/path-for 'maria.cloud.views/firebase {:doc/id id})]]
        [acc-item {:href href
@@ -80,7 +91,7 @@
         title])]))
 
 (ui/defview curriculum-list [current-path]
-  [acc-section "Curriculum"
+  [acc-section {:title "Curriculum"}
    (map (fn [{:as m
               :keys [curriculum/name
                      file/hash
@@ -104,11 +115,11 @@
                   :class "relative"}
 
      [:div {:class "flex flex-row h-[40px] items-stretch border-b border-zinc-100"}
-      [:div.flex.items-center.px-3.icon-zinc
+      [:div.flex.items-center.pl-1.pr-3.icon-zinc
        {:on-click #(swap! ui/!state assoc :sidebar/visible? false)
         :style {:margin-top 3}}
-       [icons/x-mark:mini "w-5 h-5 rotate-180"]]
+       [icons/x-mark:mini "w-4 h-4 rotate-180"]]
       [:div.flex-grow]]
-     [my-docs current-path]
      [recently-viewed current-path]
+     [my-docs current-path]
      [curriculum-list current-path]]))
