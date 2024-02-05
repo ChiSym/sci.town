@@ -159,9 +159,9 @@
      :prose/backspace {:bindings [:Backspace]
                        :hidden? true
                        :f (chain links/open-link-on-backspace
+                                 pm.cmd/joinBackward
                                  pm.cmd/selectNodeBackward
-                                 pm.cmd/deleteSelection
-                                 pm.cmd/joinBackward)
+                                 pm.cmd/deleteSelection)
                        :kind :prose}
      :prose/join-up {:bindings [:Alt-ArrowUp]
                      :hidden? true

@@ -51,7 +51,7 @@
   ;; notion: 1st opacity-100, others are staggered, tooltips
   (let [uid (db/get ::auth/user :uid)]
     (when-let [entries (some->> @(fdb/$value [:fire/query [:visitors doc-id] [:orderByChild :-ts]])
-                                ;           (remove #(= uid (name (key %))))
+                                (remove #(= uid (name (key %))))
                                 (take 3))]
       (let [overflow? (> (count entries) 2)]
         [:div.flex.gap-1.items-center
