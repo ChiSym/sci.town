@@ -102,6 +102,10 @@
     @apply list-disc;
 }
 
+.ProseMirror li > p:first-child, .ProseMirror li > ul:first-child {
+    @apply mt-0;
+}
+
 
 .ProseMirror > *:not(.NodeView) {
     @apply md:w-1/2 leading-relaxed pl-4;
