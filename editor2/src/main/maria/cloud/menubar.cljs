@@ -12,6 +12,7 @@
             [maria.editor.icons :as icons]
             [maria.editor.keymaps :as keymaps]
             [maria.ui :as ui]
+            [promesa.core :as p]
             [re-db.api :as db]
             [yawn.hooks :as h]
             [yawn.view :as v]))
@@ -188,7 +189,8 @@
       [:el.contents Root
        [:a.menu-trigger.flex.items-center {:href "/"} [icons/home "w-5 h-5"]]
        [:div.menu-trigger.items-center.flex.bg-zinc-500.text-white.hover:text-white.hover:bg-zinc-700.gap-1.h-7.place-self-center.mr-1
-        {:on-click #(persist/new-firebase-doc!)}
+        {:on-click #(p/do (auth/ensure-sign-in+)
+                          (persist/new-firebase-doc!))}
         [icons/document-plus:mini "w-5 h-5"]
         "New"]
        (or menubar-content [:div.flex-auto])
@@ -206,5 +208,5 @@
          (if (auth/pending?)
            [icons/loading "w-5 h-5 opacity-30"]
            [button-small-med
-            {:on-click #(auth/sign-in!)}
+            {:on-click #(auth/sign-in+)}
             [icons/github "w-4 h-4 mr-2"] "Sign in"]))]]]))

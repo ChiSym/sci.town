@@ -26,7 +26,7 @@
 
 (def provider (new Auth/GithubAuthProvider))
 
-(j/defn handle-auth-result! [^js {:as user :keys [photoURL email displayName uid]}]
+(j/defn handle-authed-user! [^js {:as user :keys [photoURL email displayName uid]}]
   (if user
     (do
       (db/transact! [{:db/id ::user
@@ -40,9 +40,14 @@
     (db/transact! [[:db/retractEntity ::user]]))
   (reset! !initialized? true))
 
-(defn sign-in! []
+(defn sign-in+ []
   (p/-> (Auth/signInWithPopup (Auth/getAuth) provider)
-        handle-auth-result!))
+        (j/get :user)
+        handle-authed-user!))
+
+(defn ensure-sign-in+ []
+  (when-not (get-user)
+    (sign-in+)))
 
 (defn sign-out! []
   (.signOut (Auth/getAuth)))
@@ -53,13 +58,13 @@
     (Database/connectDatabaseEmulator @fdb/!db "127.0.0.1" 9000))
   ;; this doesn't work yet, but redirects are preferred for mobile
   #_(p/-> (Auth/getRedirectResult (Auth/getAuth))
-        (j/get :user)
-        handle-auth-result!)
+          (j/get :user)
+          handle-authed-user!)
 
-  (.onAuthStateChanged (Auth/getAuth) handle-auth-result!)
+  (.onAuthStateChanged (Auth/getAuth) handle-authed-user!)
 
   (keymaps/register-commands!
-    {:account/sign-in {:f (fn [_] (sign-in!))
+    {:account/sign-in {:f (fn [_] (sign-in+))
                        :when (fn [_] (not (get-user)))}
      :account/sign-out {:f (fn [_] (sign-out!))
                         :when (fn [_] (some? (get-user)))}}))

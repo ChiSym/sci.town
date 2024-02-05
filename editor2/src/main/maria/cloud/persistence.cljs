@@ -119,10 +119,12 @@
    :file/save-a-copy {:when (every-pred :file/id :ProseView)
                       :f (fn [{:keys [ProseView file/id]}]
                            (let [file @($doc id)]
-                             (new-firebase-doc! {:prosemirror/state (j/get ProseView :state)
-                                                 :copy-of id
-                                                 :title (some->> (:file/title file)
-                                                                 (str "Copy of "))})))}
+                             (p/do (auth/ensure-sign-in+)
+                                   (new-firebase-doc! {:prosemirror/state (j/get ProseView :state)
+                                                       :copy-of id
+                                                       :title (some->> (:file/title file)
+                                                                       (str "Copy of "))}))
+                             true))}
    :file/revert {:when (comp local-changes? :file/id)
                  :f (fn [{:keys [file/id ProseView]}]
                       (j/let [source (:file/source @($doc id))]

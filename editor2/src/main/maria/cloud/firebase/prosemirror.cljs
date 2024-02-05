@@ -9,6 +9,8 @@
             [maria.editor.code.NodeView :as NodeView]
             [maria.editor.code.sci :as sci]
             [maria.editor.prosemirror.schema :as schema]
+            [maria.cloud.persistence :as persist]
+            [maria.editor.util :as u]
             [promesa.core :as p]
             [re-db.api :as db]
             [yawn.hooks :as h]))
@@ -59,6 +61,21 @@
                                                               (.updateState view new-state)
                                                               (updateCollab tx new-state))))})
                                 (j/assoc! :!sci-ctx (atom (sci/initial-context)))))})))]
+
+    (h/use-effect
+      ;; infer a title for Untitled docs on close
+      (fn []
+        (when @!prose-view
+          #(try
+             (when (= "Untitled" (:file/title @(persist/$doc id)))
+               (when-let [title (-> @!prose-view
+                                    (j/get :state)
+                                    persist/state-source
+                                    u/extract-title)]
+                 (fdb/assoc-in+ [:doc id :title] title)))
+             (catch js/Error e))))
+      [@!prose-view])
+
     (h/use-effect
       (fn []
         (if-let [element @!ref]
