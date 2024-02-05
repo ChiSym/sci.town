@@ -2,12 +2,10 @@
   (:require ["firebase/app" :as Firebase]
             ["firebase/auth" :as Auth]
             ["firebase/database" :as Database]
-            [maria.cloud.firebase.database :as fdb]
             [applied-science.js-interop :as j]
             [clojure.string :as str]
-            [maria.cloud.local-sync :as local-sync]
+            [maria.cloud.firebase.database :as fdb]
             [maria.editor.keymaps :as keymaps]
-            [maria.editor.util :as u]
             [promesa.core :as p]
             [re-db.api :as db]
             [re-db.reactive :as r]))
@@ -24,9 +22,7 @@
 (defn set-user! [x]
   (db/transact! [(assoc x :db/id ::user)]))
 
-(defn pending? []
-  (and (not @!initialized?)
-       (some? (local-sync/get-entity ::token))))
+(defn pending? [] (not @!initialized?))
 
 (def provider (new Auth/GithubAuthProvider))
 

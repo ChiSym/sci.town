@@ -1,5 +1,6 @@
 (ns maria.editor.core
-  (:require ["prosemirror-view" :as p.view]
+  (:require ["spark-md5" :as md5]
+            ["prosemirror-view" :as p.view]
             ["prosemirror-state" :as p.state]
             ["prosemirror-history" :refer [history]]
             ["prosemirror-dropcursor" :refer [dropCursor]]
@@ -8,14 +9,15 @@
             ["react" :as react]
             ["react-dom" :as react-dom]
             ["firebase/database" :as FDP]
+            ["lodash.debounce" :as debounce]
             [applied-science.js-interop :as j]
             [applied-science.js-interop.alpha :refer [js]]
             [clojure.string :as str]
             [maria.cloud.firebase.prosemirror :refer [use-firebase-view]]
+            [maria.cloud.local :as local]
             [maria.cloud.menubar :as menu]
             [maria.cloud.persistence :as persist]
             [maria.cloud.presence :as presence]
-            [maria.cloud.routes :as routes]
             [maria.editor.code.NodeView :as NodeView]
             [maria.editor.code.commands :as commands]
             [maria.editor.code.parse-clj :as parse-clj :refer [clojure->markdown]]
@@ -104,26 +106,49 @@
                                x)))))
       [doc-id])))
 
-(defn use-prose-view [{:keys [default-value on-change-state]} deps]
+(defn autosave-local
+  "Returns a callback that will save the current doc to local storage"
+  [id ^js prev-state ^js next-state]
+  (when-not (.eq (.-doc prev-state) (.-doc next-state))
+    (time
+      (reset! (local/ratom id)
+              {:file/local-source (persist/state-source prev-state)}
+              ;; maybe: store the hash of the original source to detect changes
+              #_(when-let [source (:file/source @(persist/$doc id))]
+                  {:file/source-hash (md5/hash source)})))))
+
+(defn use-prose-view [{:keys [file/id
+                              default-value]} deps]
   (let [!ref (h/use-state nil)
         ref-fn (h/use-callback #(when % (reset! !ref %)))
         !prose-view (h/use-state nil)
+        autosave! (h/use-memo #(debounce autosave-local 1000 #js{:leading true :trailing true}))
         make-prose-view (fn [element]
                           (js (-> (p.view/EditorView. {:mount element}
                                                       {:state (js (.create p.state/EditorState
                                                                            {:doc (clj->doc default-value)
                                                                             :plugins (plugins)}))
                                                        :nodeViews {:code_block NodeView/editor}
-                                                       #_#_:handleDOMEvents {:blur #(js/console.log "blur" %1 %2)}
-                                                       ;; no-op tx for debugging
                                                        :dispatchTransaction (fn [tx]
                                                                               (this-as ^js view
                                                                                 (let [prev-state (.-state view)
                                                                                       next-state (.apply prev-state tx)]
                                                                                   (.updateState view next-state)
-                                                                                  (when on-change-state
-                                                                                    (on-change-state prev-state next-state)))))})
+                                                                                  (autosave! id prev-state next-state))))})
                                   (j/assoc! :!sci-ctx (atom (sci/initial-context))))))]
+
+    (h/use-effect
+      ;; save local state immediately when tab is hidden
+      (fn []
+        (let [cb (fn []
+                   (when (j/get js/document :hidden)
+                     (j/call autosave! :flush)))]
+          (when @!prose-view
+            (js/document.addEventListener "visibilitychange" cb)
+            #(do (j/call autosave! :flush)
+                 (js/document.removeEventListener "visibilitychange" cb)))))
+      [@!prose-view])
+
     (h/use-effect
       (fn []
         (if-let [element (and default-value @!ref)]
@@ -139,22 +164,19 @@
   [params {:as file :keys [file/id file/provider]}]
   "Returns a ref for the element where the editor is to be mounted."
 
-  (persist/use-readonly-file file)
   (presence/track-doc-presence! id)
   (use-doc-menu-content id)
 
-  (let [autosave! (h/use-memo persist/autosave-local-fn)
-        [ProseView ref-fn] (case provider
+  (let [[ProseView ref-fn] (case provider
 
                              :file.provider/prosemirror-firebase
-                             (use-firebase-view {:id id
+                             (use-firebase-view {:file/id id
                                                  :plugins (plugins)})
 
-                             (use-prose-view {:default-value (or (:file/source @(persist/local-ratom id))
+                             (use-prose-view {:file/id id
+                                              :default-value (or (:file/local-source @(local/ratom id))
                                                                  (:file/source file)
-                                                                 "")
-                                              :on-change-state (fn [prev-state next-state]
-                                                                 (autosave! id prev-state next-state))}
+                                                                 "")}
                                              []))]
 
     ;; initialize new editors
@@ -179,3 +201,18 @@
   (if file
     [editor* params file]
     [:div.circle-loading.m-2 [:div] [:div]]))
+
+
+;; TODO
+;; - infer-title function
+;;   - [1] namespace :title metadata, [2] first # (heading) in doc, [3] namespace name
+;; - comments https://discuss.prosemirror.net/t/inlining-a-node-for-a-comment-plugin-or-best-to-use-marks/2391/4
+
+
+;; Format Approach
+;; - the prosemirror document is the source of truth
+;;   & will contain annotations that are not emitted to clj/markdown
+;;   (eg. comments, highlights, etc.)
+;; - derived data:
+;;   - namespace, title, @mentions, +links, :requires, etc.
+;;   - versioned source files (clj) which can be reused by other notebooks

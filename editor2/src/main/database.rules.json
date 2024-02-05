@@ -34,6 +34,9 @@
         "namespace": {
           ".validate": "newData.val().matches(/^[a-z0-9-]+$/)"
         },
+        "copy-of": {
+          ".validate": "newData.isString() && (newData.val().matches(/^(gist|curriculum):/) || root.child('doc').child(newData.val()).exists())"
+        },
         "language": {
           ".validate": "newData.isString()"
         },

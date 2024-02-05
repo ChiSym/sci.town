@@ -56,6 +56,7 @@
         file (u/use-promise #(when url
                                (p/let [source (p/-> (u/fetch url)
                                                     (j/call :text))]
+                                 (db/transact! [[:db/add [:file/id id] :file/source source]])
                                  (assoc file :file/source source)))
                             [id])]
     [editor.core/editor params file]))
@@ -65,30 +66,17 @@
   [{:as params gist-id :gist/id}]
   (let [file (u/use-promise #(p/-> (u/fetch (str "https://api.github.com/gists/" gist-id))
                                    (j/call :json)
-                                   gh/parse-gist)
+                                   gh/parse-gist
+                                   (fn [file] (db/transact! [file])))
                             [gist-id])]
     [editor.core/editor params file]))
 
 (ui/defview firebase
   {:key :doc/id}
   [{:as params :keys [doc/id]}]
-  ;; should be: namespace
-  (let [{:keys [title filename language]} @(fdb/$value [:doc id])]
-    [editor.core/editor params {:file/id id
-                                :file/title title
-                                :file/name filename
-                                :file/language language
-                                :file/provider :file.provider/prosemirror-firebase}]))
+  [editor.core/editor params @(persist/$doc id)])
 
-(defn local-file [id]
-  {:file/id id
-   :file/provider :file.provider/local})
-
-(ui/defview local [{:as params :keys [local/id]}]
-  [editor.core/editor params (merge (local-file id)
-                                    @(persist/local-ratom id))])
-
-(ui/defview http-text [{:as params :keys [url]}]
+(ui/defview http-text [{:as params :keys [http-text/url]}]
   (let [url (cond-> url
                     (str/includes? url "%2F")
                     (js/decodeURIComponent))
@@ -96,8 +84,11 @@
                      (not (str/starts-with? url "http"))
                      (str "https://"))
         file (u/use-promise #(p/let [source (p/-> (u/fetch url)
-                                                  (j/call :text))]
-                               {:file/id url
-                                :file/source source})
+                                                  (j/call :text))
+                                     file  {:file/id url
+                                            :http-text/url url
+                                            :file/source source}]
+                               (db/transact! [file])
+                               file)
                             [url])]
     [editor.core/editor params file]))

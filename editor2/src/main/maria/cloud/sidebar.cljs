@@ -1,6 +1,5 @@
 (ns maria.cloud.sidebar
   (:require ["@radix-ui/react-accordion" :as acc]
-            ["@radix-ui/react-dropdown-menu" :as Dropdown]
             [maria.cloud.auth :as auth]
             [maria.cloud.firebase.database :as fdb]
             [maria.cloud.persistence :as persist]
@@ -52,7 +51,9 @@
   (when file
     (case provider
       :file.provider/prosemirror-firebase (routes/path-for 'maria.cloud.views/firebase {:doc/id (:file/id file)})
-      :file.provider/curriculum (routes/path-for 'maria.cloud.views/curriculum file))))
+      :file.provider/curriculum (routes/path-for 'maria.cloud.views/curriculum file)
+      :file.provider/gist (routes/path-for 'maria.cloud.views/gist file)
+      :file.provider/http-text (routes/path-for 'maria.cloud.views/http-text file))))
 
 (ui/defview recently-viewed [current-path]
   (when-let [user-id (db/get ::auth/user :uid)]
@@ -61,8 +62,7 @@
       [acc-section "Recently Viewed"
        (doall
          (for [[id foo] (sort-by (comp :-ts val) visited)
-               :let [doc (or @(persist/$doc id)
-                             (db/get [:file/id (fdb/demunge (name id))]))]
+               :let [doc @(persist/$doc id)]
                :when doc
                :let [path (file->path doc)]]
            [acc-item (acc-props (= current-path path)
@@ -70,34 +70,14 @@
                                  :href path})
             (:file/title doc)]))])))
 
-(defn dropdown [trigger & items]
-  (v/x [:el Dropdown/Root
-        [:el Dropdown/Trigger {:as-child true} trigger]
-        [:el Dropdown/Portal
-         (into [:el.rounded.bg-white.p-2 Dropdown/Content] items)]]))
-
-(defn dropdown-item [{:keys [href on-click label]}]
-  [:el Dropdown/Item {:as-child true}
-   [(if href :a :div)
-    {:href href :on-click on-click}
-    label]])
-
 (ui/defview my-docs [current-path]
-  (when-let [docs (seq (persist/$my-firebase-docs))]
+  (when-let [docs (seq (persist/$my-docs))]
     [acc-section "My Docs"
      (for [{:file/keys [id title]} docs
            :let [href (routes/path-for 'maria.cloud.views/firebase {:doc/id id})]]
        [acc-item {:href href
                   :key id}
-        title]
-       #_[dropdown
-          [acc-item {:href href
-                     :key id}
-           title]
-          [dropdown-item {:on-click #(do
-                                       (when (= href current-path)
-                                         (routes/navigate! 'maria.cloud.pages.landing/page))
-                                       (persist/delete-doc! id))}]])]))
+        title])]))
 
 (ui/defview curriculum-list [current-path]
   [acc-section "Curriculum"

@@ -117,8 +117,7 @@
                      (reset! !title (.. ^js e -target -value)))}])))
 
 (ui/defview doc-menu [id]
-  (let [file (or @(persist/$doc id)
-                 (db/get [:file/id id]))
+  (let [file @(persist/$doc id)
         provider (:file/provider file)
         !editing-title? (h/use-state false)]
     [:div.flex.items-center.gap-1
@@ -142,30 +141,32 @@
            [icons/chevron-down:mini "w-4 h-4"]]]]
         [:el menu/Portal
          [:el menu/Content {:class "MenubarContent mt-2 z-[60] relative"}
-          (case provider
-            :file.provider/prosemirror-firebase
+
+          (when (= provider :file.provider/prosemirror-firebase)
             [:<>
              [item {:on-click #(reset! !editing-title? true)} "Rename"]
-             [command-item :file/revert]
-             [command-item :file/save]
-             [command-item :file/delete]]
-            :file.provider/gist
-            [:<>
-             [:el menu/Item {:as-child true}
-              [:a
-               {:href (str "https://gist.github.com/" (:gist/id file))
-                :target "_blank"
-                :class item-classes}
-               "View on GitHub"
-               [icons/arrow-top-right-on-square:mini "w-4 h-4 ml-1"]]]]
-            nil)
-          [command-item :file/revert]
+             [command-item :file/delete]])
+
+          (when (= provider :file.provider/gist)
+            [:el menu/Item {:as-child true}
+             [:a
+              {:href (str "https://gist.github.com/" (:gist/id file))
+               :target "_blank"
+               :class item-classes}
+              "View on GitHub"
+              [icons/arrow-top-right-on-square:mini "w-4 h-4 ml-1"]]])
+
+          (when (not= provider :file.provider/prosemirror-firebase)
+            [command-item :file/revert])
+
           [command-item :file/save-a-copy]]]])
      [:div.w-2.h-2.rounded-full.transition-all
       {:class (if (and (= provider :file.provider/local)
-                       (seq (persist/changes id)))
+                       (seq (persist/local-changes? id)))
                 "bg-yellow-500"
-                "bg-transparent")}]]))
+                "bg-transparent")}]
+     (when (persist/local-changes? id)
+       [:span.text-zinc-500 "Local Changes"])]))
 
 (defn has-selection? [el]
   (some-> (j/get el :selectionStart)

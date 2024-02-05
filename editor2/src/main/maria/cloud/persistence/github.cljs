@@ -15,11 +15,13 @@
                              (keep (j/fn [^js {:keys [filename language content]}]
                                      (when (= language "Clojure")
                                        {:file/id (str "gist:" id) ;; ":filename"
-                                        :file/title (some-> description
-                                                            str/trim
-                                                            (str/split-lines)
-                                                            first
-                                                            (u/guard (complement str/blank?)))
+                                        :gist/id id
+                                        :file/title (or (some-> description
+                                                                str/trim
+                                                                (str/split-lines)
+                                                                first
+                                                                (u/guard (complement str/blank?)))
+                                                        filename)
                                         :file/name filename
                                         :file/language language
                                         :file/source content

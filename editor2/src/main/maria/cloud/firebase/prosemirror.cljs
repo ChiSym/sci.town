@@ -31,7 +31,7 @@
 
 ;; - add "Copy as Markdown" commands
 
-(defn use-firebase-view [{:keys [id plugins]}]
+(defn use-firebase-view [{:keys [file/id plugins]}]
   (let [!ref (h/use-state nil)
         ref-fn (h/use-callback #(when % (reset! !ref %)))
         !prose-view (h/use-state nil)
