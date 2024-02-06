@@ -201,18 +201,3 @@
   (if file
     [editor* params file]
     [:div.circle-loading.m-2 [:div] [:div]]))
-
-
-;; TODO
-;; - infer-title function
-;;   - [1] namespace :title metadata, [2] first # (heading) in doc, [3] namespace name
-;; - comments https://discuss.prosemirror.net/t/inlining-a-node-for-a-comment-plugin-or-best-to-use-marks/2391/4
-
-
-;; Format Approach
-;; - the prosemirror document is the source of truth
-;;   & will contain annotations that are not emitted to clj/markdown
-;;   (eg. comments, highlights, etc.)
-;; - derived data:
-;;   - namespace, title, @mentions, +links, :requires, etc.
-;;   - versioned source files (clj) which can be reused by other notebooks

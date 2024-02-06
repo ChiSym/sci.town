@@ -7,6 +7,8 @@ A multiplayer notebook for exploratory learning and teaching in probabilistic co
 - install dependencies: `yarn`
 - start the dev server: `bb dev`
 
+The dev server uses a local emulator for the Firebase database, so you won't see production data here.
+
 ## Adding additional 3rd party libraries
 
 Third party libraries currently require a PR to this repo. See `maria.editor.extensions.config`

@@ -20,19 +20,6 @@
 ;; changes but B has committed in the meantime, A's attempt will fail. A will then receive
 ;; B's changes, commit them locally, and try again.
 
-;; TODO
-;; - create a doc, duplicate a doc => this goes into Firebase
-;; - list my docs (or any user's docs)
-;; - set public/private
-;; - invite collaborators, manage collaborators
-;; - create a sharing link, manage sharing links
-
-;; - ensure that github, gist, and http links still work
-;;   - these are "editable" but persist only to localStorage
-;;     "Save...", pick a name, it goes into your profile and is now managed in Firebase.
-
-;; - add "Copy as Markdown" commands
-
 (defn use-firebase-view [{:keys [file/id plugins]}]
   (let [!ref (h/use-state nil)
         ref-fn (h/use-callback #(when % (reset! !ref %)))

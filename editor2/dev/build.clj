@@ -69,6 +69,7 @@
                              {:src (shadow/module-path :editor :core)}]}))
 
 (def child-process
+  "Run a shell command which terminates with the current one, and streams output to stdout"
   (partial bp/process
            {:in :inherit
             :out :inherit
@@ -78,7 +79,8 @@
 (defn tailwind-watch!
   {:shadow.build/stage :flush}
   [state]
-  (defonce _tailwind (child-process "npx tailwindcss -w -i src/editor.css -o public/editor.css"))
+  (defonce _tailwind
+           (child-process "npx tailwindcss -w -i src/editor.css -o public/editor.css"))
   state)
 
 (defn firebase-emulate!

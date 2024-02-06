@@ -13,7 +13,7 @@ module.exports.FirebaseEditor = class FirebaseEditor {
   constructor({ firebaseRef, stateConfig, clientID, view: constructView, progress = _ => _ }) {
     progress(0 / 2)
     const this_ = this
-    const selfClientID = clientID || push(firebaseRef).key
+    const selfClientID = (clientID ? clientID+":" : "") + push(firebaseRef).key
     const checkpointRef = this.checkpointRef = child(firebaseRef, 'checkpoint')
     const changesRef = this.changesRef = child(firebaseRef, 'changes')
     const selectionsRef = this.selectionsRef = child(firebaseRef, 'selections')
