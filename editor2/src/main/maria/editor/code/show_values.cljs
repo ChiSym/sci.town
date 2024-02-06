@@ -254,7 +254,12 @@
 
 (defview show-var [opts x]
   (v/x [:<>
-        (when (fn? @x) [:div.text-gray-500.mb-1 (str x)])
+        (when true #_(fn? @x)
+          [:div.text-gray-500.mb-1
+           ;; show qualified var only if not in current ns
+           (if (= ((:sci/get-ns opts)) (:ns (meta x)))
+             (str "#'" (:name (meta x)))
+             (str x))])
         (show opts @x)]))
 
 (defview show-str [opts x]

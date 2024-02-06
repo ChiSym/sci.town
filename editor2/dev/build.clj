@@ -48,7 +48,6 @@
             :file/url (str "/curriculum/" file-name "?v=" hash)
             :file/provider :file.provider/curriculum})
         (fs/list-dir (fs/file "src/main/maria/curriculum"))))
-(read-curriculum-namespaces)
 
 (defn index-html []
   (page/root "sci.town"
@@ -56,7 +55,7 @@
               :styles [{:href (assets/path "/editor.css")}]
               :scripts/head [{:src "https://polyfill.io/v3/polyfill.min.js?version=3.111.0&features=URLSearchParams%2CURL"}]
               :props/html {:class "bg-neutral-100"}
-              :body [:div#maria-live]
+              :body [:div#sci-town]
               :scripts/body [{:type "application/re-db:schema"
                               :value (str {:file/id (merge schema/unique-id
                                                            schema/string)

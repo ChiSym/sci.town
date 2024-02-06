@@ -1,9 +1,8 @@
 (ns maria.cloud.github
-  (:require ["firebase/app" :as firebase]
-            ["firebase/auth" :as auth :refer [getAuth
-                                              GithubAuthProvider
-                                              signInWithPopup
-                                              getAdditionalUserInfo]]
+  (:require ["firebase/app" :as Firebase]
+            ["firebase/auth" :as Auth]
+            ["firebase/database" :as Database]
+            [maria.cloud.firebase.database :as fdb]
             [applied-science.js-interop :as j]
             [clojure.string :as str]
             [maria.cloud.local-sync :as local-sync]
@@ -13,9 +12,10 @@
             [re-db.api :as db]
             [re-db.reactive :as r]))
 
-;; TODO ...
-;; wait to load gist page until we have an auth result (in/out)
-;; to avoid load failure while waiting for auth to complete?
+(defonce !app
+         (delay
+           (Firebase/initializeApp (clj->js
+                                     (db/get :maria.cloud/env :firebase)))))
 
 (defonce !initialized? (r/atom false))
 
@@ -39,7 +39,7 @@
   (when-let [t (get-token)]
     {:Authorization (str "Bearer " t)}))
 
-(def provider (doto (new GithubAuthProvider)
+(def provider (doto (new Auth/GithubAuthProvider)
                 (.addScope "gist")))
 
 (j/defn handle-user! [^js {:as user :keys [photoURL email displayName uid]
@@ -49,6 +49,12 @@
                     :photo-url photoURL
                     :email email
                     :display-name displayName})
+
+        ;; we always (re)set the user's displayName and photoURL;
+        ;; alternatively we could check first if they exist
+        (fdb/assoc-in! ["profile" uid]
+                       {:displayName displayName
+                        :avatar photoURL})
         (p/let [username (p/-> (u/fetch (str "https://api.github.com/user/" github-uid) :headers (auth-headers))
                                (j/call :json)
                                (j/get :login))]
@@ -58,16 +64,19 @@
         (db/transact! [[:db/retractEntity ::user]])
         (reset! !initialized? true))))
 
-(defn sign-in! []
-  (p/let [result (signInWithPopup (getAuth) provider)]
+(defn handle-auth-result! [result]
+  (when result
     (set-token! {(j/get-in result [:user :uid])
-                 (-> (.credentialFromResult GithubAuthProvider result)
+                 (-> (.credentialFromResult Auth/GithubAuthProvider result)
                      (j/get :accessToken))})
     (handle-user! (j/get result :user))))
 
+(defn sign-in! []
+  (p/-> (Auth/signInWithPopup (Auth/getAuth) provider)
+        handle-auth-result!))
 
 (defn sign-out []
-  (.signOut (getAuth)))
+  (.signOut (Auth/getAuth)))
 
 (j/defn parse-gist [^js {:keys [id
                                 description
@@ -98,13 +107,14 @@
             :gist/updated_at updated_at})))
 
 (defn init []
-  (firebase/initializeApp (clj->js
-                           (db/get :maria.cloud/env :firebase)))
+  (reset! fdb/!db (Database/getDatabase @!app))
+  ;; this doesn't work yet, but redirects are preferred for mobile
+  (p/-> (Auth/getRedirectResult (Auth/getAuth)) handle-auth-result!)
 
-  (.onAuthStateChanged (getAuth) handle-user!)
+  (.onAuthStateChanged (Auth/getAuth) handle-user!)
 
   (keymaps/register-commands!
-   {:account/sign-in {:f (fn [_] (sign-in!))
-                      :when (fn [_] (not (get-user)))}
-    :account/sign-out {:f (fn [_] (sign-out))
-                       :when (fn [_] (some? (get-user)))}}))
+    {:account/sign-in {:f (fn [_] (sign-in!))
+                       :when (fn [_] (not (get-user)))}
+     :account/sign-out {:f (fn [_] (sign-out))
+                        :when (fn [_] (some? (get-user)))}}))

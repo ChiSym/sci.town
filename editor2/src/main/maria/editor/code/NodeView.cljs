@@ -277,7 +277,7 @@
            :class [toggle-classes "opacity-70 focus:opacity-100 hover:opacity-100 transition-opacity"]}
           (icons/minus-small:mini "w-5 h-5")])]]
      [:div.value-viewer
-      [:div [value-viewer this]]
+      [value-viewer this]
       [:div.ml-auto.flex.flex-col.items-center
        [:div.text-slate-300.hover:text-slate-600.z-5.mr-1
         {:on-click #(commands/code:eval-NodeView! this)}

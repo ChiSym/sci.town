@@ -57,7 +57,7 @@
   (init-re-db)
   (gh/init)
   (routes/init)
-  (root/create :maria-live (v/<> [root])))
+  (root/create :sci-town (v/<> [root])))
 
 (comment
   (init))

@@ -1,6 +1,7 @@
 {:firebase
  {:apiKey "AIzaSyAkgqCM8D3tIXSa4syOznM9R1iWiYsNrYo",
   :authDomain "probcomp-caliban.firebaseapp.com",
+  :databaseURL "https://probcomp-caliban-default-rtdb.firebaseio.com",
   :projectId "probcomp-caliban",
   :storageBucket "probcomp-caliban.appspot.com",
   :messagingSenderId "110275315150"
