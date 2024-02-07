@@ -10,6 +10,7 @@
             [yawn.view :as v]))
 
 (defn initials [display-name]
+  ;; when avatar not present, show user's initials, max 2 letters
   (let [words (str/split display-name #"\s+")]
     (str/upper-case
       (str/join "" (map first
@@ -26,7 +27,9 @@
      [:el.fill-gray-700 Tip/Arrow]
      tip]]])
 
-(defn time-since-phrase [ts]
+(defn time-since-phrase
+  "A friendly phrase representing time since timestamp `ts`"
+  [ts]
   (let [now (js/Date.)
         past (js/Date. ts)
         / (comp Math/round /)

@@ -13,7 +13,6 @@
             [maria.editor.keymaps :as keymaps]
             [maria.ui :as ui]
             [promesa.core :as p]
-            [re-db.api :as db]
             [yawn.hooks :as h]
             [yawn.view :as v]))
 

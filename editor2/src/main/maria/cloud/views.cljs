@@ -1,7 +1,10 @@
 (ns maria.cloud.views
   (:require [applied-science.js-interop :as j]
             [clojure.string :as str]
+            [maria.cloud.persistence :as persist]
+            [maria.cloud.persistence.github :as gh]
             [maria.cloud.routes :as routes]
+            [maria.editor.code.show-values :as show]
             [maria.editor.core :as editor.core]
             [maria.editor.util :as u]
             [maria.ui :as ui]
@@ -9,11 +12,7 @@
             [re-db.api :as db]
             [re-db.reactive :as r]
             [yawn.hooks :as h]
-            [yawn.view :as y]
-            [maria.cloud.persistence :as persist]
-            [maria.editor.code.show-values :as show]
-            [maria.cloud.firebase.database :as fdb]
-            [maria.cloud.persistence.github :as gh]))
+            [yawn.view :as y]))
 
 
 (comment

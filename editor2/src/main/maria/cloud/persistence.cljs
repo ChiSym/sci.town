@@ -101,19 +101,25 @@
         (->> (mapv parse-firebase-doc)))))
 
 (defn local-changes? [id]
-  (let [local-source (:file/local-source @(local/ratom id))
-        persisted-source (:file/source @($doc id))]
-    (and local-source
-         persisted-source
-         (not= local-source persisted-source))))
+  (let [doc (and id @($doc id))]
+    (and (not= :file.provider/prosemirror-firebase (:file/provider doc))
+         (let [local-source (:file/local-source @(local/ratom id))
+               persisted-source (:file/source doc)]
+           (and local-source
+                persisted-source
+                (not= local-source persisted-source))))))
 
 (keymaps/register-commands!
   {:file/new {:bindings [:Shift-Mod-b]
               :f (fn [_]
                    (u/prevent-default!)
-                   (new-firebase-doc!)
+                   (p/do (auth/ensure-sign-in+)
+                         (new-firebase-doc!))
                    true)}
-   :file/delete {:f (fn [{:keys [file/id]}]
+   :file/delete {:when (fn [{:keys [file/id]}]
+                         (and id
+                              (= :file.provider/prosemirror-firebase (:file/provider @($doc id)))))
+                 :f (fn [{:keys [file/id]}]
                       (routes/navigate! 'maria.cloud.pages.landing/page)
                       (delete-doc! id))}
    :file/save-a-copy {:when (every-pred :file/id :ProseView)

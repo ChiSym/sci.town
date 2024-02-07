@@ -25,14 +25,10 @@
 
 (glogi-console/install!)
 
+;; gradually adopt glogi so that we can keep debugging info out of view
+;; but easy to opt back in when needed.
 (log/set-levels '{:glogi/root :info
-                  maria.cloud.firebase.database :trace
-                  maria.cloud.persistence :trace})
-;; TODO
-;; - UI for sidebar,
-;; - support per-attribute local-state persistence
-;; - include curriculum as a re-db transaction,
-;; -
+                  maria.editor.keymaps :trace})
 
 (defn get-scripts [type]
   (->> (js/document.querySelectorAll (str "[type='" type "']"))

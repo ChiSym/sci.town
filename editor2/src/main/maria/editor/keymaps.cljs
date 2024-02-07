@@ -486,13 +486,13 @@
      (assoc cmd :context context))))
 
 (defn run-command
-  ([cmd] (run-command (get-context) cmd))
+  ([cmd] (run-command (or (:context cmd) (get-context)) cmd))
   ([context cmd]
    (let [{:keys [f kind active?]} (resolve-command context cmd)]
      (when active?
        (case kind
-         :prose (run-prosemirror f context)
-         :code (run-codemirror f context)
+         :prose (run-prosemirror context f)
+         :code (run-codemirror context f)
          (f context))))))
 
 (defn use-global-keymap []
