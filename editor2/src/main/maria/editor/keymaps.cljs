@@ -159,7 +159,7 @@
      :prose/backspace {:bindings [:Backspace]
                        :hidden? true
                        :f (chain links/open-link-on-backspace
-                                 pm.cmd/joinBackward
+                                 pm.cmd/joinTextblockBackward
                                  pm.cmd/selectNodeBackward
                                  pm.cmd/deleteSelection)
                        :kind :prose}
@@ -183,6 +183,7 @@
      :prose/enter {:bindings [:Enter]
                    :hidden? true
                    :f (chain (pm.schema-list/splitListItem list_item)
+                             pm.cmd/liftEmptyBlock
                              code.commands/prose:convert-to-code)
                    :kind :prose}
      :prose/arrow-left {:bindings [:ArrowLeft]
