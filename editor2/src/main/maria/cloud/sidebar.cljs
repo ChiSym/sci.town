@@ -1,16 +1,14 @@
 (ns maria.cloud.sidebar
   (:require ["@radix-ui/react-accordion" :as acc]
-            [applied-science.js-interop :as j]
-            [clojure.string :as str]
-            [maria.cloud.github :as gh]
+            [maria.cloud.auth :as auth]
+            [maria.cloud.firebase.database :as fdb]
             [maria.cloud.persistence :as persist]
             [maria.cloud.routes :as routes]
             [maria.editor.icons :as icons]
-            [maria.editor.util :as u]
             [maria.ui :as ui]
-            [promesa.core :as p]
             [re-db.api :as db]
             [re-db.hooks :as hooks]
+            [yawn.hooks :as h]
             [yawn.view :as v]))
 
 (defn sidebar-width []
@@ -29,56 +27,71 @@
       [:div.flex-grow.overflow-y-auto sidebar]]
      content]))
 
-(def acc-item (v/from-element :a.block
-                              {:class ["text-sm text-black no-underline"
-                                       "pr-2 pl-4 mx-1 py-1 rounded cursor-default"
-                                       "hover:bg-black/5 hover:text-black visited:text-black"
-                                       "data-[selected=true]:bg-sky-500 data-[selected=true]:text-white"]}))
-
 (defn acc-props [current? props]
   (merge {:data-selected current?}
          props))
 
-(ui/defview acc-section [title items]
+(def acc-item (v/from-element :a.block
+                              {:class ["text-sm text-black no-underline flex gap-1 last:mb-1"
+                                       "pr-2 pl-5 mx-1 h-7 truncate items-center rounded cursor-default"
+                                       "hover:bg-black/5 hover:text-black visited:text-black"
+                                       "data-[selected=true]:bg-sky-500 data-[selected=true]:text-white"]}))
+
+(defn use-acc-limit [limit items]
+  (let [!expanded? (h/use-state false)]
+    (if (and (not @!expanded?)
+             (> (count items) limit))
+      (concat (take limit items)
+              [[acc-item {:on-click #(swap! !expanded? true)} [icons/ellipsis:mini "text-zinc-400 w-4 h-4"]]])
+      items)))
+
+(ui/defview acc-section [{:keys [title
+                                 limit]
+                          :or {limit 20}} items]
   [:> acc/Item
    {:value title
     :class ui/c:divider}
    [:> acc/Header
-    {:class "flex flex-row h-[40px] m-0"}
-    [:> acc/Trigger {:class "text-sm font-bold p-2 AccordionTrigger flex-grow"}
-     [icons/chevron-right:mini "w-4 h-4 -ml-1 AccordionChevron"]
+    {:class "flex flex-row h-[40px] mt-0 group "}
+    [:> acc/Trigger {:class "text-sm font-bold AccordionTrigger flex-grow flex items-center"}
+     [icons/chevron-right:mini "mx-1 w-4 h-4 flex items-center justify-center AccordionChevron text-gray-500 group-hover:text-black"]
      title]]
-   (into [:el.flex.flex-col.gap-1 acc/Content] items)])
+   (into [:el.flex.flex-col.gap-1 acc/Content] (use-acc-limit limit items))])
 
-(ui/defview recents [current-path]
-  (when-let [recents (seq @persist/!recents)]
-    [acc-section "Recently Viewed"
-     (for [{:keys [maria/path file/id file/title]} recents]
-       [acc-item (acc-props (= current-path path)
-                            {:key id
-                             :href path})
+(defn file->path [{:as file :keys [file/provider]}]
+  (when file
+    (case provider
+      :file.provider/prosemirror-firebase (routes/path-for 'maria.cloud.views/firebase {:doc/id (:file/id file)})
+      :file.provider/curriculum (routes/path-for 'maria.cloud.views/curriculum file)
+      :file.provider/gist (routes/path-for 'maria.cloud.views/gist file)
+      :file.provider/http-text (routes/path-for 'maria.cloud.views/http-text file))))
+
+(ui/defview recently-viewed [current-path]
+  (when-let [user-id (db/get ::auth/user :uid)]
+    (when-let [visited @(fdb/$value [:fire/query [:visited user-id]
+                                     [:orderByChild :-ts]])]
+      [acc-section {:title "Recently Viewed" :limit 3}
+       (doall
+         (for [[id foo] (sort-by (comp :-ts val) visited)
+               :let [doc @(persist/$doc id)]
+               :when doc
+               :let [path (file->path doc)]]
+           [acc-item (acc-props (= current-path path)
+                                {:key id
+                                 :href path})
+            (:file/title doc)]))])))
+
+(ui/defview my-docs [current-path]
+  (when-let [docs (seq (persist/$my-docs))]
+    [acc-section {:title "My Docs"}
+     (for [{:file/keys [id title]} docs
+           :let [href (routes/path-for 'maria.cloud.views/firebase {:doc/id id})]]
+       [acc-item {:href href
+                  :key id}
         title])]))
 
-(ui/defview user-gist-list [{:keys [username current-path]}]
-  (let [gists (u/use-promise #(p/-> (u/fetch (str "https://api.github.com/users/" username "/gists")
-                                             :headers (merge {:Content-Type "text/plain"}
-                                                             (gh/auth-headers)))
-                                    (j/call :json))
-                             [username])]
-    [acc-section "My Gists"
-     (for [{:keys [file/name :gist/id :gist/description]} (keep gh/parse-gist gists)]
-       (v/x [acc-item {:href (routes/path-for 'maria.cloud.views/gist
-                                              {:gist/id id})
-                       :key id}
-             (or (some-> description
-                         str/trim
-                         (str/split-lines)
-                         first
-                         (u/guard (complement str/blank?)))
-                 name)]))]))
-
 (ui/defview curriculum-list [current-path]
-  [acc-section "Curriculum"
+  [acc-section {:title "Curriculum"}
    (map (fn [{:as m
               :keys [curriculum/name
                      file/hash
@@ -102,16 +115,11 @@
                   :class "relative"}
 
      [:div {:class "flex flex-row h-[40px] items-stretch border-b border-zinc-100"}
-      [:div.flex.items-center.px-3.icon-zinc
+      [:div.flex.items-center.pl-1.pr-3.icon-zinc
        {:on-click #(swap! ui/!state assoc :sidebar/visible? false)
         :style {:margin-top 3}}
-       [icons/x-mark:mini "w-5 h-5 rotate-180"]]
-      [:div.flex-grow]
-      [:a.px-3.flex.items-center.icon-zinc {:href "/"} [icons/home "w-5 h-5"]]]
-
-     [recents current-path]
-     [curriculum-list current-path]
-
-     (when-let [username (:username (gh/get-user))]
-       (user-gist-list {:username username
-                        :current-path current-path}))]))
+       [icons/x-mark:mini "w-4 h-4 rotate-180"]]
+      [:div.flex-grow]]
+     [recently-viewed current-path]
+     [my-docs current-path]
+     [curriculum-list current-path]]))

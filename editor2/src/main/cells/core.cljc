@@ -60,7 +60,7 @@
      []
      (hooks/use-geo-location)))
 
-(def loading? (comp async/loading? deref async/!status))
+(def loading? (comp async/loading? deref async/!loading?))
 (def message (comp first r/deref-result))
 (def error? (comp some? message))
 

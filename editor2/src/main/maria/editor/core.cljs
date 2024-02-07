@@ -1,5 +1,6 @@
 (ns maria.editor.core
-  (:require ["prosemirror-view" :as p.view]
+  (:require ["spark-md5" :as md5]
+            ["prosemirror-view" :as p.view]
             ["prosemirror-state" :as p.state]
             ["prosemirror-history" :refer [history]]
             ["prosemirror-dropcursor" :refer [dropCursor]]
@@ -7,13 +8,16 @@
             ["prosemirror-schema-list" :as cmd-list]
             ["react" :as react]
             ["react-dom" :as react-dom]
+            ["firebase/database" :as FDP]
+            ["lodash.debounce" :as debounce]
             [applied-science.js-interop :as j]
             [applied-science.js-interop.alpha :refer [js]]
-            [maria.cloud.firebase.database :as fdb]
-            [maria.cloud.github :as gh]
+            [clojure.string :as str]
+            [maria.cloud.firebase.prosemirror :refer [use-firebase-view]]
+            [maria.cloud.local :as local]
             [maria.cloud.menubar :as menu]
             [maria.cloud.persistence :as persist]
-            [maria.cloud.routes :as routes]
+            [maria.cloud.presence :as presence]
             [maria.editor.code.NodeView :as NodeView]
             [maria.editor.code.commands :as commands]
             [maria.editor.code.parse-clj :as parse-clj :refer [clojure->markdown]]
@@ -24,7 +28,6 @@
             [maria.editor.prosemirror.schema :as schema]
             [maria.editor.util :as u]
             [maria.ui :as ui]
-            [re-db.api :as db]
             [yawn.hooks :as h]
             [yawn.view :as v]))
 
@@ -86,50 +89,6 @@
               (map (j/get :textContent)))
         (j/get-in doc [:content :content])))
 
-(ui/defview show-avatar [uid]
-  (when-let [{:as foo :keys [avatar displayName]} (first (fdb/use-map [:profile uid]))]
-    [:img.w-5.h-5.rounded {:key uid :src avatar :title displayName}]))
-
-(ui/defview show-presence-avatars [doc-id]
-  ;; TODO
-  ;; - on hover, show the full list in a popover
-  ;; - if user has no avatar, show initials
-  (when-let [uids (some->> (fdb/use-map [:presence (fdb/munge doc-id)])
-                           first
-                           (sort-by (fn [a b] (compare b a)) val)
-                           (map (comp name key))
-                           ;; comment this to show current user, for testing
-                           (remove #{(db/get ::gh/user :uid)})
-                           (take 3))]
-    (let [overflow? (> (count uids) 2)
-          show-uids (if overflow?
-                      (take 2 uids)
-                      uids)]
-      [:div.flex.gap-1.items-center
-       (doall (map show-avatar show-uids))
-       (when overflow?
-         [:div
-          {:class ["bg-zinc-200 text-zinc-500"
-                   "text-xs font-semibold"
-                   "w-5 h-5 rounded"
-                   "inline-flex items-center justify-center"]}
-          (count uids)])])))
-
-(defn use-presence-tracking! [doc-id]
-  ;; record this session in the document's presence store
-  (let [uid (db/get ::gh/user :uid)
-        doc-id (some-> doc-id fdb/munge)]
-    (h/use-effect (fn []
-                    (when (and doc-id uid)
-                      ;; a user can have multiple tabs/sessions open, so we track them independently
-                      ;; to avoid clobbering state (eg. tab A closes while tab B is still open)
-                      ;; {:presence {<doc-id> {<user-id> {<timestamp> true}}}}
-                      (let [ref (fdb/ref [:presence doc-id uid (js/Date.now)])]
-                        (-> (fdb/on-disconnect ref)
-                            (j/call :remove))
-                        (fdb/assoc-in! ref true)
-                        #(fdb/assoc-in! ref nil))))
-                  [doc-id uid])))
 
 (defn use-doc-menu-content [doc-id]
   (let [!content (ui/use-context ::menu/!content)]
@@ -138,7 +97,8 @@
         (let [content (v/x
                         [:<>
                          [menu/doc-menu doc-id]
-                         [show-presence-avatars doc-id]])]
+                         [:div.flex-auto]
+                         [presence/show-presence-avatars doc-id]])]
           (reset! !content content)
           #(swap! !content (fn [x]
                              (if (identical? x content)
@@ -146,26 +106,49 @@
                                x)))))
       [doc-id])))
 
-(defn use-prose-view [{:keys [default-value on-change-state]} deps]
+(defn autosave-local
+  "Returns a callback that will save the current doc to local storage"
+  [id ^js prev-state ^js next-state]
+  (when-not (.eq (.-doc prev-state) (.-doc next-state))
+    (time
+      (reset! (local/ratom id)
+              {:file/local-source (persist/state-source prev-state)}
+              ;; maybe: store the hash of the original source to detect changes
+              #_(when-let [source (:file/source @(persist/$doc id))]
+                  {:file/source-hash (md5/hash source)})))))
+
+(defn use-prose-view [{:keys [file/id
+                              default-value]} deps]
   (let [!ref (h/use-state nil)
         ref-fn (h/use-callback #(when % (reset! !ref %)))
         !prose-view (h/use-state nil)
+        autosave! (h/use-memo #(debounce autosave-local 1000 #js{:leading true :trailing true}))
         make-prose-view (fn [element]
                           (js (-> (p.view/EditorView. {:mount element}
                                                       {:state (js (.create p.state/EditorState
                                                                            {:doc (clj->doc default-value)
                                                                             :plugins (plugins)}))
                                                        :nodeViews {:code_block NodeView/editor}
-                                                       #_#_:handleDOMEvents {:blur #(js/console.log "blur" %1 %2)}
-                                                       ;; no-op tx for debugging
                                                        :dispatchTransaction (fn [tx]
                                                                               (this-as ^js view
                                                                                 (let [prev-state (.-state view)
                                                                                       next-state (.apply prev-state tx)]
                                                                                   (.updateState view next-state)
-                                                                                  (when on-change-state
-                                                                                    (on-change-state prev-state next-state)))))})
+                                                                                  (autosave! id prev-state next-state))))})
                                   (j/assoc! :!sci-ctx (atom (sci/initial-context))))))]
+
+    (h/use-effect
+      ;; save local state immediately when tab is hidden
+      (fn []
+        (let [cb (fn []
+                   (when (j/get js/document :hidden)
+                     (j/call autosave! :flush)))]
+          (when @!prose-view
+            (js/document.addEventListener "visibilitychange" cb)
+            #(do (j/call autosave! :flush)
+                 (js/document.removeEventListener "visibilitychange" cb)))))
+      [@!prose-view])
+
     (h/use-effect
       (fn []
         (if-let [element (and default-value @!ref)]
@@ -176,29 +159,33 @@
       (conj deps @!ref))
     [@!prose-view ref-fn]))
 
-(ui/defview editor* [params {:as file :keys [file/id]}]
+(ui/defview editor*
+  {:key (fn [params file] (:file/provider file))}
+  [params {:as file :keys [file/id file/provider]}]
   "Returns a ref for the element where the editor is to be mounted."
 
-  (persist/use-persisted-file file)
-  (use-presence-tracking! id)
+  (presence/track-doc-presence! id)
   (use-doc-menu-content id)
-  (persist/use-recents! (::routes/path params) file)
 
-  (let [autosave! (h/use-memo persist/autosave-local-fn)
-        [ProseView ref-fn] (use-prose-view {:default-value (or (:file/source @(persist/local-ratom id))
-                                                               (:file/source file)
-                                                               "")
-                                            :on-change-state (fn [prev-state next-state]
-                                                               (autosave! id prev-state next-state))}
-                                           [])]
+  (let [[ProseView ref-fn] (case provider
+
+                             :file.provider/prosemirror-firebase
+                             (use-firebase-view {:file/id id
+                                                 :plugins (plugins)})
+
+                             (use-prose-view {:file/id id
+                                              :default-value (or (:file/local-source @(local/ratom id))
+                                                                 (:file/source file)
+                                                                 "")}
+                                             []))]
 
     ;; initialize new editors
     (h/use-effect
       (fn []
         (when (some-> ProseView (u/guard (complement (j/get :isDestroyed))))
-
           (keymaps/add-context :ProseView ProseView)
-          (commands/prose:eval-prose-view! ProseView)
+          (when-not (str/includes? js/window.location.href "eval=false")
+            (commands/prose:eval-prose-view! ProseView))
           (j/call ProseView :focus)))
       [ProseView])
 
@@ -213,4 +200,4 @@
   [params file]
   (if file
     [editor* params file]
-    "Loading..."))
+    [:div.circle-loading.m-2 [:div] [:div]]))

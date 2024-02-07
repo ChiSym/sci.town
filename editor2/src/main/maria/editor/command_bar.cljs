@@ -23,9 +23,8 @@
           {:key value
            :value value
            :onSelect (fn [_]
-                       (let [ctx (keymaps/get-context)]
-                         (keymaps/run-command ctx cmd)
-                         (keymaps/hide-command-bar! ctx)))
+                       (keymaps/run-command (:context cmd) cmd)
+                       (keymaps/hide-command-bar! (keymaps/get-context)))
            :class "data-[selected]:bg-sky-500 data-[selected]:text-white"}
           [:div.w-20.truncate.text-menu-muted.pr-2 (when (and ns (not= \_ (first ns))) ns)]
           title

@@ -68,15 +68,27 @@
                                                   (read-string (slurp (io/resource "config.public.edn")))))}
                              {:src (shadow/module-path :editor :core)}]}))
 
+(def child-process
+  "Run a shell command which terminates with the current one, and streams output to stdout"
+  (partial bp/process
+           {:in :inherit
+            :out :inherit
+            :err :inherit
+            :shutdown bp/destroy-tree}))
+
 (defn tailwind-watch!
   {:shadow.build/stage :flush}
   [state]
-  (defonce _tailwind (bp/process
-                      {:in :inherit
-                       :out :inherit
-                       :err :inherit
-                       :shutdown bp/destroy-tree}
-                      "npx tailwindcss -w -i src/editor.css -o public/editor.css"))
+  (defonce _tailwind
+           (child-process "npx tailwindcss -w -i src/editor.css -o public/editor.css"))
+  state)
+
+(defn firebase-emulate!
+  {:shadow.build/stage :configure}
+  [state]
+  (bp/shell "mkdir -p .firebase-local")
+  (defonce _firebase-emulators
+           (child-process "firebase emulators:start --import .firebase-local"))
   state)
 
 (defn copy-curriculum! {:shadow.build/stage :flush}
@@ -93,9 +105,8 @@
 
 (defn browse!
   {:shadow.build/stage :flush}
-  [build-state]
-  (when-let [port (-> build-state :devtools :http-port)]
-    (browse-url (str "http://localhost:" port)))
+  [build-state url]
+  (browse-url url)
   build-state)
 
 (comment
