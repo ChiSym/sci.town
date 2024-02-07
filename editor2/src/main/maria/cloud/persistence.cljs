@@ -1,216 +1,144 @@
 (ns maria.cloud.persistence
-  (:require [applied-science.js-interop :as j]
-            [goog.functions :as gf]
-            [maria.cloud.github :as gh]
+  (:require ["prosemirror-compress" :as pm-compress]
+            ["prosemirror-state$EditorState" :as EditorState]
+            [applied-science.js-interop :as j]
+            [lambdaisland.glogi :as log]
+            [maria.cloud.auth :as auth]
+            [maria.cloud.firebase.database :as fdb]
             [maria.cloud.local :as local]
-            [maria.cloud.local-sync :as local-sync]
             [maria.cloud.routes :as routes]
+            [maria.editor.code.commands :as commands]
+            [maria.editor.code.parse-clj :as parse-clj]
             [maria.editor.doc :as doc]
             [maria.editor.keymaps :as keymaps]
+            [maria.editor.prosemirror.schema :as schema]
             [maria.editor.util :as u]
-            [maria.ui :as ui]
             [promesa.core :as p]
             [re-db.api :as db]
-            [maria.editor.code.commands :as commands]
-            [yawn.hooks :as h]))
+            [re-db.reactive :as r]))
 
-;; Maria is currently a single-file editor.
-;; When loading a gist, we pick the first Clojure file.
-
-(defn extract-filename [source]
+(defn title->filename [source]
   (some-> (u/extract-title source)
           u/slug
           (str ".cljs")))
 
-(def entity-ratom
-  (memoize
-    (fn [db-id]
-      (reify
-        IDeref
-        (-deref [o] (db/get db-id))
-        ISwap
-        (-swap! [o f] (reset! o (f @o)))
-        (-swap! [o f a] (reset! o (f @o a)))
-        (-swap! [o f a b] (reset! o (f @o a b)))
-        (-swap! [o f a b xs] (reset! o (apply f @o a b xs)))
-        IReset
-        (-reset! [o new-value]
-          (let [prev-value @o]
-            (db/transact! (into [(assoc new-value :db/id (:db/id prev-value db-id))]
-                                (for [[k v] (dissoc prev-value :db/id)
-                                      :when (not (contains? new-value k))]
-                                  [:db/retract db-id k v])))
-            @o))))))
-
-(defn local-ratom [id]
-  (local-sync/sync-entity! id)
-  (entity-ratom (local-sync/db-id id)))
-
-(defn persisted-ratom [id]
-  (entity-ratom [:file/id id]))
-
 (def state-source (comp doc/doc->clj (j/get :doc)))
-
-(defn new-blank-file! [& [{:as file
-                           :file/keys [source name]}]]
-  (some-> js/window.event (j/call :preventDefault))
-  (let [id (str (random-uuid))]
-    (reset! (local-ratom id)
-            {:file/source (or source "")
-             :file/name (or name (extract-filename source))})
-    (routes/navigate! 'maria.cloud.views/local {:local/id id})
-    true))
-
-(defn current-file [id]
-  (merge @(persisted-ratom id)
-         @(local-ratom id)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Keep track of recently viewed files
-
-(defonce !recents (local/ratom ::recent-docs ()))
-
-(comment
-  (swap! !recents empty))
-
-(defn add-to-recents! [path file]
-  (let [entry {:maria/path path
-               :file/id (:file/id file)
-               :file/title (or (:file/title file)
-                               (some-> (:file/source file) u/extract-title)
-                               (:file/name file))}]
-    (when (:file/title entry)
-      (swap! !recents (fn [xs]
-                        (->> xs
-                             (remove #(= (:file/id %) (:file/id file)))
-                             (cons entry)))))))
-
-(defn remove-from-recents! [id]
-  (swap! !recents (partial remove #(= (:file/id %) id))))
-
-(defn use-recents! [path {:as file :keys [file/id]}]
-  (let [possible-title (or (:file/title file)
-                           (some-> (:file/source file) u/extract-title)
-                           (:file/name file))]
-    (h/use-effect
-      (fn []
-        (when (seq (:file/source file))
-          (add-to-recents! path file)))
-      [path
-       id
-       possible-title])))
-
-(defn changes [id]
-  (when id
-    (let [persisted (and id @(persisted-ratom id))
-          local @(local-ratom id)]
-      (not-empty
-        (into {}
-              (keep (fn [k]
-                      (let [before (k persisted)
-                            after (k local)]
-                        (when (and after (not= before after))
-                          [k [before after]]))))
-              [:file/name
-               :file/source])))))
-
-(defn autosave-local-fn
-  "Returns a callback that will save the current doc to local storage after a 1s debounce."
-  []
-  (-> (fn [id ^js prev-state ^js next-state]
-        (when-not (.eq (.-doc prev-state) (.-doc next-state))
-          (swap! (local-ratom id) assoc :file/source (state-source next-state))))
-      (gf/debounce 100)))
 
 (defn swap-name [n f & args]
   (let [ext (re-find #"\..*$" n)
         pre (subs n 0 (- (count n) (count ext)))]
     (str (apply f pre args) ext)))
 
-(defn gh-fetch [url options]
-  (p/-> (js/fetch url (clj->js (-> options
-                                   (u/update-some {:body (comp js/JSON.stringify clj->js)})
-                                   (update :headers merge
-                                           {:X-GitHub-Api-Version "2022-11-28"
-                                            :accept "application/vnd.github+json"}
-                                           (gh/auth-headers)))))
-        (j/call :json)
-        (clj->js :keywordize-keys true)))
+(defn new-firebase-doc! [& {:as opts :keys [title language content prosemirror/state copy-of]}]
+  (when-let [user-id (db/get ::auth/user :uid)]
+    (let [checkpoint (when-let [state (or state
+                                          (some-> content
+                                                  parse-clj/clojure->markdown
+                                                  schema/markdown->doc
+                                                  (as-> doc (EditorState/create #js{:doc doc}))))]
+                       (-> (j/call state :toJSON)
+                           pm-compress/compressStateJSON
+                           (j/assoc! :k 0 :t fdb/TIMESTAMP)))
+          ref (fdb/push [:doc])
+          doc-id (j/get ref :key)
+          new-doc (merge {[:doc doc-id] {:title (or title "Untitled")
+                                         :copy-of copy-of
+                                         :owner user-id
+                                         :visibility "link"
+                                         :provider "prosemirror-firebase"
+                                         :created-at fdb/TIMESTAMP}
+                          [:roles :by-user user-id doc-id] "admin"
+                          [:roles :by-doc doc-id user-id] "admin"}
+                         (when checkpoint
+                           {[:prosemirror doc-id :checkpoint] checkpoint}))]
+      (log/trace "Creating new firebase doc" new-doc)
+      (p/do (fdb/update+ new-doc)
+            (routes/navigate! 'maria.cloud.views/firebase {:doc/id doc-id})))))
 
-(defn update-gist [id]
-  (let [!local (local-ratom id)
-        !persisted (persisted-ratom id)
-        {filename :file/name} @!persisted
-        changes (changes id)
-        new-source (second (:file/source changes))
-        body (cond-> {}
-                     (:file/name changes) (assoc-in [:files filename :filename] (second (:file/name changes)))
-                     (:file/source changes) (assoc-in [:files filename :content] new-source))
-        gist-id (:gist/id @!persisted)]
-    (when (seq body)
-      (assert gist-id "No gist ID found for update")
-      (p/let [file (p/-> (gh-fetch (str "https://api.github.com/gists/" gist-id)
-                                   {:method "PATCH"
-                                    :body body})
-                         gh/parse-gist)]
-        (when file
-          (reset! !persisted file)
-          (reset! !local (select-keys file [:file/source])))))))
+(defn delete-doc! [doc-id]
+  (p/let [user-id (db/get ::auth/user :uid)
+          user-roles (fdb/once [:roles :by-doc doc-id])
+          user-visits (fdb/once [:visitors doc-id])]
+    (log/trace "delete doc from users" user-roles)
+    (let [updates (merge {[:doc doc-id] nil
+                          [:roles :by-doc doc-id] nil
+                          [:visitors doc-id] nil
+                          [:prosemirror doc-id] nil}
+                         (for [user-id (keys user-roles)]
+                           [[:roles :by-user user-id doc-id] nil])
+                         (for [user-id (keys user-visits)]
+                           [[:visited user-id doc-id] nil]))]
+      (log/trace "delete doc" (fdb/format-update updates))
+      (fdb/update+ updates))))
 
-(defn create-gist [id]
-  (let [!local (local-ratom id)
-        local @!local
-        !persisted (persisted-ratom id)
-        source (:file/source local)
-        filename (or (:file/name local)
-                     (extract-filename source)
-                     "untitled.cljs")
-        body {:files {filename {:content source}}}]
-    (when (seq body)
-      (remove-from-recents! id)
-      (p/let [file (p/-> (gh-fetch (str "https://api.github.com/gists")
-                                   {:method "POST"
-                                    :body body})
-                         gh/parse-gist)]
-        (when file
-          (reset! !persisted file)
-          (reset! !local (select-keys file [:file/source]))
-          (routes/navigate! 'maria.cloud.views/gist {:gist/id (:gist/id file)}))))))
+(defn parse-firebase-doc
+  ([[id doc]] (parse-firebase-doc id doc))
+  ([id {:keys [title language owner visibility provider created-at]}]
+   #:file{:id id
+          :title title
+          :language language
+          :provider (keyword "file.provider" provider)
+          :visibility visibility
+          :owner owner
+          :created-at created-at}))
 
-(defn writable? [id]
-  (not= :file.provider/curriculum (:file/provider (current-file id))))
+(defn $doc [id]
+  (r/reaction
+    (or
+      ;; readonly sources are fetched and written to re-db
+      (db/get [:file/id id])
+      ;; firebase sources are accessed via the fdb/$value subscription
+      (some->>
+        @(fdb/$value [:doc id])
+        (parse-firebase-doc id)))))
+
+(defn $my-docs []
+  (when-let [uid (db/get ::auth/user :uid)]
+    (-> (fdb/$value [:fire/query [:doc]
+                     [:orderByChild :owner]
+                     [:equalTo uid]])
+        deref
+        (->> (mapv parse-firebase-doc)))))
+
+(defn local-changes? [id]
+  (let [doc (and id @($doc id))]
+    (and (not= :file.provider/prosemirror-firebase (:file/provider doc))
+         (let [local-source (:file/local-source @(local/ratom id))
+               persisted-source (:file/source doc)]
+           (and local-source
+                persisted-source
+                (not= local-source persisted-source))))))
 
 (keymaps/register-commands!
   {:file/new {:bindings [:Shift-Mod-b]
-              :f (fn [_] (new-blank-file!))}
-   :file/duplicate {:when (every-pred :file/id :ProseView)
-                    ;; create a new gist with contents of current doc.
-                    :f (fn [{:keys [ProseView file/id]}]
-                         (let [source (state-source (j/get ProseView :state))]
-                           (new-blank-file! {:file/source source
-                                             :file/name (some-> (:file/name (current-file id))
-                                                                (swap-name (partial str "copy_of_")))})))}
-   :file/revert {:when (comp seq changes :file/id)
+              :f (fn [_]
+                   (u/prevent-default!)
+                   (p/do (auth/ensure-sign-in+)
+                         (new-firebase-doc!))
+                   true)}
+   :file/delete {:when (fn [{:keys [file/id]}]
+                         (and id
+                              (= :file.provider/prosemirror-firebase (:file/provider @($doc id)))))
+                 :f (fn [{:keys [file/id]}]
+                      (routes/navigate! 'maria.cloud.pages.landing/page)
+                      (delete-doc! id))}
+   :file/save-a-copy {:when (every-pred :file/id :ProseView)
+                      :f (fn [{:keys [ProseView file/id]}]
+                           (let [file @($doc id)]
+                             (p/do (auth/ensure-sign-in+)
+                                   (new-firebase-doc! {:prosemirror/state (j/get ProseView :state)
+                                                       :copy-of id
+                                                       :title (some->> (:file/title file)
+                                                                       (str "Copy of "))}))
+                             true))}
+   :file/revert {:when (comp local-changes? :file/id)
                  :f (fn [{:keys [file/id ProseView]}]
-                      (j/let [source (:file/source @(persisted-ratom id))]
-                        (reset! (local-ratom id) nil)
+                      (j/let [source (:file/source @($doc id))]
+                        (reset! (local/ratom id) nil)
                         (commands/prose:replace-doc ProseView source)))}
-   :file/save {:bindings [:Ctrl-s]
-               :when (fn [{:keys [file/id]}]
-                       (and id
-                            (gh/get-token)
-                            (writable? id)))
-               ;; if local, create a new gist and then navigate there.
-               ;; if gist, save a new revision of that gist.
-               :f (fn [{:keys [file/id]}]
-                    (if (:gist/id @(persisted-ratom id))
-                      (update-gist id)
-                      (create-gist id)))}})
-
-(defn use-persisted-file
-  "Syncs persisted file to re-db"
-  [{:as file :file/keys [id source provider]}]
-  (h/use-effect (fn []
-                  (when (not= :file.provider/local provider)
-                    (reset! (persisted-ratom id) file)))
-    [id source]))
+   :file/copy-source {:doc "Copy this doc's source code to clipboard"
+                      :when :ProseView
+                      :f (fn [{:keys [ProseView]}]
+                           (j/call-in js/navigator [:clipboard :writeText]
+                                      (state-source (j/get ProseView :state)))
+                           true)}})

@@ -22,8 +22,8 @@
        {"" 'maria.cloud.pages.landing/page
         ["curriculum/" :curriculum/name] 'maria.cloud.views/curriculum
         ["gist/" :gist/id] 'maria.cloud.views/gist
-        ["local/" :local/id] 'maria.cloud.views/local
-        ["http-text/" [#".*" :url]] 'maria.cloud.views/http-text
+        ["doc/" :doc/id] 'maria.cloud.views/firebase
+        ["http-text/" [#".*" :http-text/url]] 'maria.cloud.views/http-text
         "intro" [::redirect "/curriculum/clojure-with-shapes"]}])))
 
 (defn match-route [path]

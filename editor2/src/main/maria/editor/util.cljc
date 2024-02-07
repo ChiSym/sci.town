@@ -31,8 +31,8 @@
 
 (defn strip-prefix [s pfx]
   (cond-> s
-          (str/starts-with? s pfx)
-          (subs (count pfx))))
+    (str/starts-with? s pfx)
+    (subs (count pfx))))
 
 #?(:cljs
    (defn type:number
@@ -79,7 +79,7 @@
      (let [[v v!] (h/use-state nil)]
        (h/use-effect #(do (v! nil)
                           (p/catch (p/-> (fetch url opts) v!) str))
-         [url])
+                     [url])
        v)))
 
 #?(:cljs
@@ -93,7 +93,7 @@
                             (p/let [result promise]
                               (when (= @!current-promise promise)
                                 (v! [result v-deps])))))
-         deps)
+                     deps)
        (when (= deps v-deps)
          v))))
 
@@ -105,8 +105,8 @@
 
 (defn dissoc-value [m k v]
   (cond-> m
-          (identical? (m k) v)
-          (dissoc k)))
+    (identical? (m k) v)
+    (dissoc k)))
 
 (defn find-first [coll pred]
   (reduce (fn [_ x] (if (pred x) (reduced x) _)) nil coll))
@@ -140,6 +140,10 @@
       (truncate-segmented 35 "")
       (str/replace #"[\s_]+" "_")))
 
+#?(:cljs
+   (defn prevent-default!
+     ([] (some-> js/window.event (j/call :preventDefault)))
+     ([e] (j/call e :preventDefault))))
 
 (comment
   (truncate-segmented "This is a long string" 7 "...")

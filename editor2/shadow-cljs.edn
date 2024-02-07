@@ -8,8 +8,10 @@
                    {:public-path "public"
                     "/index.html" (build/index-html)})]
    :dev {:build-hooks [(build/tailwind-watch!)
+                       (build/firebase-emulate!)
                        (build/copy-curriculum!)
-                       (build/browse!)]}
+                       (build/browse! "http://localhost:4000/database/probcomp-caliban-default-rtdb/data")
+                       (build/browse! "http://localhost:8000")]}
    :release {:build-hooks [#_(shadow.cljs.build-report/hook {:output-to "public/build-report.html"})]}
    :devtools {:http-root "public"
               :http-port 8000
