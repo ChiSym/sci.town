@@ -6,7 +6,7 @@
                                     :git/sha "e29e17b2a647006ac0e96307bbc893b01b99c3e9"}
         nextjournal/clojure-mode {:git/url "https://github.com/nextjournal/clojure-mode"
                                   :git/sha "8248736f7afb12fcd8e03439ff02703174dd0de6"}
-        org.babashka/sci {:mvn/version "0.8.40"}
+        org.babashka/sci {:mvn/version "0.8.41"}
         babashka/fs {:mvn/version "0.3.17"}
         babashka/process {:mvn/version "0.4.16"}
         io.github.babashka/sci.configs {:git/sha "bf8d209e4aeabb92cb1be04e3d8f789583d5f449"}
