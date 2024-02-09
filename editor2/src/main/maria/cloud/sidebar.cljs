@@ -58,33 +58,33 @@
      title]]
    (into [:el.flex.flex-col.gap-1 acc/Content] (use-acc-limit limit items))])
 
-(defn file->path [{:as file :keys [file/provider]}]
-  (when file
-    (case provider
-      :file.provider/prosemirror-firebase (routes/path-for 'maria.cloud.views/firebase {:doc/id (:file/id file)})
-      :file.provider/curriculum (routes/path-for 'maria.cloud.views/curriculum file)
-      :file.provider/gist (routes/path-for 'maria.cloud.views/gist file)
-      :file.provider/http-text (routes/path-for 'maria.cloud.views/http-text file))))
+(defn file->path [{:as file :keys [doc/provider]}]
+      (when file
+            (case provider
+      :doc.provider/prosemirror-firebase (routes/path-for 'maria.cloud.views/firebase {:doc/id (:doc/id file)})
+      :doc.provider/curriculum (routes/path-for 'maria.cloud.views/curriculum file)
+      :doc.provider/gist (routes/path-for 'maria.cloud.views/gist file)
+      :doc.provider/http-text (routes/path-for 'maria.cloud.views/http-text file))))
 
 (ui/defview recently-viewed [current-path]
-  (when-let [user-id (db/get ::auth/user :uid)]
-    (when-let [visited @(fdb/$value [:fire/query [:visited user-id]
+            (when-let [user-id (db/get ::auth/user :uid)]
+                      (when-let [visited @(fdb/$value [:fire/query [:visited user-id]
                                      [:orderByChild :-ts]])]
-      [acc-section {:title "Recently Viewed" :limit 3}
+                                [acc-section {:title "Recently Viewed" :limit 3}
        (doall
          (for [[id foo] (sort-by (comp :-ts val) visited)
                :let [doc @(persist/$doc id)]
                :when doc
                :let [path (file->path doc)]]
-           [acc-item (acc-props (= current-path path)
+              [acc-item (acc-props (= current-path path)
                                 {:key id
                                  :href path})
-            (:file/title doc)]))])))
+            (:doc/title doc)]))])))
 
 (ui/defview my-docs [current-path]
   (when-let [docs (seq (persist/$my-docs))]
     [acc-section {:title "My Docs"}
-     (for [{:file/keys [id title]} docs
+     (for [{:keys [:doc/id :doc/title]} docs
            :let [href (routes/path-for 'maria.cloud.views/firebase {:doc/id id})]]
        [acc-item {:href href
                   :key id}
@@ -94,11 +94,10 @@
   [acc-section {:title "Curriculum"}
    (map (fn [{:as m
               :keys [curriculum/name
-                     file/hash
-                     file/title]}]
+                     doc/url
+                     doc/title]}]
           (let [path (routes/path-for 'maria.cloud.views/curriculum
-                                      {:curriculum/name name
-                                       :query {:v hash}})
+                                      {:curriculum/name name})
                 current? (= path current-path)]
             (v/x [acc-item
                   (acc-props current?

@@ -74,19 +74,19 @@
 (defn parse-firebase-doc
   ([[id doc]] (parse-firebase-doc id doc))
   ([id {:keys [title language owner visibility provider created-at]}]
-   #:file{:id id
-          :title title
-          :language language
-          :provider (keyword "file.provider" provider)
-          :visibility visibility
-          :owner owner
-          :created-at created-at}))
+   #:doc{:id id
+         :title title
+         :language language
+         :provider (keyword "doc.provider" provider)
+         :visibility visibility
+         :owner owner
+         :created-at created-at}))
 
 (defn $doc [id]
   (r/reaction
     (or
       ;; readonly sources are fetched and written to re-db
-      (db/get [:file/id id])
+      (db/get [:doc/id id])
       ;; firebase sources are accessed via the fdb/$value subscription
       (some->>
         @(fdb/$value [:doc id])
@@ -102,43 +102,43 @@
 
 (defn local-changes? [id]
   (let [doc (and id @($doc id))]
-    (and (not= :file.provider/prosemirror-firebase (:file/provider doc))
-         (let [local-source (:file/local-source @(local/ratom id))
-               persisted-source (:file/source doc)]
+    (and (not= :doc.provider/prosemirror-firebase (:doc/provider doc))
+         (let [local-source (:doc/local-source @(local/ratom id))
+               persisted-source (:doc/source doc)]
            (and local-source
                 persisted-source
                 (not= local-source persisted-source))))))
 
 (keymaps/register-commands!
-  {:file/new {:bindings [:Shift-Mod-b]
-              :f (fn [_]
-                   (u/prevent-default!)
-                   (p/do (auth/ensure-sign-in+)
-                         (new-firebase-doc!))
-                   true)}
-   :file/delete {:when (fn [{:keys [file/id]}]
-                         (and id
-                              (= :file.provider/prosemirror-firebase (:file/provider @($doc id)))))
-                 :f (fn [{:keys [file/id]}]
-                      (routes/navigate! 'maria.cloud.pages.landing/page)
-                      (delete-doc! id))}
-   :file/save-a-copy {:when (every-pred :file/id :ProseView)
-                      :f (fn [{:keys [ProseView file/id]}]
-                           (let [file @($doc id)]
-                             (p/do (auth/ensure-sign-in+)
-                                   (new-firebase-doc! {:prosemirror/state (j/get ProseView :state)
-                                                       :copy-of id
-                                                       :title (some->> (:file/title file)
-                                                                       (str "Copy of "))}))
-                             true))}
-   :file/revert {:when (comp local-changes? :file/id)
-                 :f (fn [{:keys [file/id ProseView]}]
-                      (j/let [source (:file/source @($doc id))]
-                        (reset! (local/ratom id) nil)
-                        (commands/prose:replace-doc ProseView source)))}
-   :file/copy-source {:doc "Copy this doc's source code to clipboard"
-                      :when :ProseView
-                      :f (fn [{:keys [ProseView]}]
-                           (j/call-in js/navigator [:clipboard :writeText]
-                                      (state-source (j/get ProseView :state)))
-                           true)}})
+  {:doc/new {:bindings [:Shift-Mod-b]
+             :f (fn [_]
+                    (u/prevent-default!)
+                    (p/do (auth/ensure-sign-in+)
+                          (new-firebase-doc!))
+                    true)}
+   :doc/delete {:when (fn [{:keys [doc/id]}]
+                          (and id
+                               (= :doc.provider/prosemirror-firebase (:doc/provider @($doc id)))))
+                :f (fn [{:keys [doc/id]}]
+                       (routes/navigate! 'maria.cloud.pages.landing/page)
+                       (delete-doc! id))}
+   :doc/save-a-copy {:when (every-pred :doc/id :ProseView)
+                     :f (fn [{:keys [ProseView doc/id]}]
+                            (let [file @($doc id)]
+                                 (p/do (auth/ensure-sign-in+)
+                                       (new-firebase-doc! {:prosemirror/state (j/get ProseView :state)
+                                                           :copy-of id
+                                                           :title (some->> (:doc/title file)
+                                                                           (str "Copy of "))}))
+                                 true))}
+   :doc/revert {:when (comp local-changes? :doc/id)
+                :f (fn [{:keys [doc/id ProseView]}]
+                       (j/let [source (:doc/source @($doc id))]
+                              (reset! (local/ratom id) nil)
+                              (commands/prose:replace-doc ProseView source)))}
+   :doc/copy-source {:doc "Copy this doc's source code to clipboard"
+                     :when :ProseView
+                     :f (fn [{:keys [ProseView]}]
+                            (j/call-in js/navigator [:clipboard :writeText]
+                                       (state-source (j/get ProseView :state)))
+                            true)}})

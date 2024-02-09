@@ -20,7 +20,7 @@
 ;; changes but B has committed in the meantime, A's attempt will fail. A will then receive
 ;; B's changes, commit them locally, and try again.
 
-(defn use-firebase-view [{:keys [file/id plugins]}]
+(defn use-firebase-view [{:keys [doc/id plugins]}]
   (let [!ref (h/use-state nil)
         ref-fn (h/use-callback #(when % (reset! !ref %)))
         !prose-view (h/use-state nil)
@@ -54,7 +54,7 @@
       (fn []
         (when @!prose-view
           #(try
-             (when (= "Untitled" (:file/title @(persist/$doc id)))
+             (when (= "Untitled" (:doc/title @(persist/$doc id)))
                (when-let [title (-> @!prose-view
                                     (j/get :state)
                                     persist/state-source

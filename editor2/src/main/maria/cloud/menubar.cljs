@@ -118,16 +118,16 @@
 
 (ui/defview doc-menu [id]
   (let [file @(persist/$doc id)
-        provider (:file/provider file)
+        provider (:doc/provider file)
         !editing-title? (h/use-state false)]
     [:div.flex.items-center.gap-1
-     (let [icon (when (= :file.provider/gist provider)
+     (let [icon (when (= :doc.provider/gist provider)
                   [:div.inset-0.flex.items-center.justify-center.w-7.absolute.z-30
                    [icons/github "w-4 h-4 mx-auto"]])]
-       [:el menu/Menu
+          [:el menu/Menu
         [:div.relative.flex.bg-zinc-100.border.border-zinc-200.hover:border-zinc-300.rounded.h-7
          [title-editor {:id id
-                        :initial-title (:file/title file)
+                        :initial-title (:doc/title file)
                         :!editing-title? !editing-title?}]
          [:el menu/Trigger
           [:<>
@@ -136,18 +136,18 @@
            [:span.p-2.pr-6
             {:class [(when @!editing-title? "opacity-0 overflow-hidden z-10 relative min-w-8")
                      (when icon "pl-7")]}
-            (:file/title file)]]
+            (:doc/title file)]]
           [:div.px-1.rounded.flex.items-center.justify-center.absolute.top-0.right-0.bottom-0.z-30
            [icons/chevron-down:mini "w-4 h-4"]]]]
         [:el menu/Portal
          [:el menu/Content {:class "MenubarContent mt-2 z-[60] relative"}
 
-          (when (= provider :file.provider/prosemirror-firebase)
-            [:<>
+          (when (= provider :doc.provider/prosemirror-firebase)
+                [:<>
              [item {:on-click #(reset! !editing-title? true)} "Rename"]
-             [command-item :file/delete]])
+             [command-item :doc/delete]])
 
-          (when (= provider :file.provider/gist)
+          (when (= provider :doc.provider/gist)
             [:el menu/Item {:as-child true}
              [:a
               {:href (str "https://gist.github.com/" (:gist/id file))
@@ -156,12 +156,12 @@
               "View on GitHub"
               [icons/arrow-top-right-on-square:mini "w-4 h-4 ml-1"]]])
 
-          (when (not= provider :file.provider/prosemirror-firebase)
-            [command-item :file/revert])
+          (when (not= provider :doc.provider/prosemirror-firebase)
+                [command-item :doc/revert])
 
-          [command-item :file/save-a-copy]]]])
+          [command-item :doc/save-a-copy]]]])
      [:div.w-2.h-2.rounded-full.transition-all
-      {:class (if (and (= provider :file.provider/local)
+      {:class (if (and (= provider :doc.provider/local)
                        (seq (persist/local-changes? id)))
                 "bg-yellow-500"
                 "bg-transparent")}]
@@ -173,7 +173,7 @@
           (not= (j/get el :selectionEnd))))
 
 (comment
-  (when (= :file.provider/gist provider)
+  (when (= :doc.provider/gist provider)
     [icons/github "w-4 h-5 mr-2"]))
 
 (ui/defview menubar []
