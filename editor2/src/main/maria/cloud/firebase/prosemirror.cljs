@@ -22,7 +22,7 @@
 
 (defn infer-title! [prose-view id]
   (try
-    (when (= "Untitled" (:file/title @(persist/$doc id)))
+    (when (= "Untitled" (:doc/title @(persist/$doc id)))
       (when-let [title (-> prose-view
                            (j/get :state)
                            persist/state-source
@@ -31,7 +31,7 @@
         true))
     (catch js/Error e)))
 
-(defn use-firebase-view [{:keys [file/id plugins]}]
+(defn use-firebase-view [{:keys [doc/id plugins]}]
   (let [!ref (h/use-state nil)
         ref-fn (h/use-callback #(when % (reset! !ref %)))
         !prose-view (h/use-state nil)

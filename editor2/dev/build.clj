@@ -37,28 +37,25 @@
 (defn read-curriculum-namespaces []
   (mapv #(let [file (fs/file %)
                file-name (fs/file-name file)
-               m (parse-meta file)
-               hash (assets/md5 (slurp file))]
-           {:db/id [:curriculum/name (last (str/split (str (:name m)) #"\."))]
-            :file/title (:title m)
-            :file/doc (:doc m)
-            :file/id (str "curriculum:" file-name)
-            :file/hash hash
-            :file/name file-name
-            :file/url (str "/curriculum/" file-name "?v=" hash)
-            :file/provider :file.provider/curriculum})
+               m (parse-meta file)]
+              {:db/id [:curriculum/name (last (str/split (str (:name m)) #"\."))]
+               :doc/title (:title m)
+               :doc/id (str "curriculum:" file-name)
+               :doc/name file-name
+               :doc/url (str "/curriculum/" file-name "?v=" (assets/md5 (slurp file)))
+               :doc/provider :file.provider/curriculum})
         (fs/list-dir (fs/file "src/main/maria/curriculum"))))
 
 (defn index-html []
-  (page/root "sci.town"
-             {:meta {:viewport "width=device-width, initial-scale=1"}
-              :styles [{:href (assets/path "/editor.css")}]
-              :scripts/head [{:src "https://polyfill.io/v3/polyfill.min.js?version=3.111.0&features=URLSearchParams%2CURL"}]
+      (page/root "sci.town"
+                 {:meta {:viewport "width=device-width, initial-scale=1"}
+                  :styles [{:href (assets/path "/editor.css")}]
+                  :scripts/head [{:src "https://polyfill.io/v3/polyfill.min.js?version=3.111.0&features=URLSearchParams%2CURL"}]
               :props/html {:class "bg-neutral-100"}
               :body [:div#sci-town]
               :scripts/body [{:type "application/re-db:schema"
-                              :value (str {:file/id (merge schema/unique-id
-                                                           schema/string)
+                              :value (str {:doc/id (merge schema/unique-id
+                                                          schema/string)
                                            :curriculum/name (merge schema/unique-id
                                                                    schema/string)})}
                              {:type "application/re-db:tx"

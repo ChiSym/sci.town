@@ -112,12 +112,13 @@
   (when-not (.eq (.-doc prev-state) (.-doc next-state))
     (time
       (reset! (local/ratom id)
-              {:file/local-source (persist/state-source prev-state)}
-              ;; maybe: store the hash of the original source to detect changes
-              #_(when-let [source (:file/source @(persist/$doc id))]
-                  {:file/source-hash (md5/hash source)})))))
+              {:doc/local-source (persist/state-source prev-state)}
+              ;; maybe: store the hash of the original source to indicate when the source doc
+              ;;        has been modified after the user began editing a local copy
+              #_(when-let [source (:doc/source @(persist/$doc id))]
+                  {:doc/source-hash (md5/hash source)})))))
 
-(defn use-prose-view [{:keys [file/id
+(defn use-prose-view [{:keys [doc/id
                               default-value]} deps]
   (let [!ref (h/use-state nil)
         ref-fn (h/use-callback #(when % (reset! !ref %)))
@@ -160,8 +161,8 @@
     [@!prose-view ref-fn]))
 
 (ui/defview editor*
-  {:key (fn [params file] (:file/provider file))}
-  [params {:as file :keys [file/id file/provider]}]
+  {:key (fn [params file] (:doc/provider file))}
+  [params {:as file :keys [doc/id doc/provider]}]
   "Returns a ref for the element where the editor is to be mounted."
 
   (presence/track-doc-presence! id)
@@ -169,13 +170,13 @@
 
   (let [[ProseView ref-fn] (case provider
 
-                             :file.provider/prosemirror-firebase
-                             (use-firebase-view {:file/id id
+                             :doc.provider/prosemirror-firebase
+                             (use-firebase-view {:doc/id id
                                                  :plugins (plugins)})
 
-                             (use-prose-view {:file/id id
-                                              :default-value (or (:file/local-source @(local/ratom id))
-                                                                 (:file/source file)
+                             (use-prose-view {:doc/id id
+                                              :default-value (or (:doc/local-source @(local/ratom id))
+                                                                 (:doc/source file)
                                                                  "")}
                                              []))]
 
@@ -189,14 +190,13 @@
           (j/call ProseView :focus)))
       [ProseView])
 
-    ;; set file/id context
     (h/use-effect (fn []
-                    (keymaps/add-context :file/id id)
-                    #(keymaps/remove-context :file/id id)))
+                      (keymaps/add-context :doc/id id)
+                      #(keymaps/remove-context :doc/id id)))
     [:div.relative.notebook.my-4 {:ref ref-fn}]))
 
 (ui/defview editor
-  {:key (fn [params file] (:file/id file))}
+  {:key (fn [params file] (:doc/id file))}
   [params file]
   (if file
     [editor* params file]

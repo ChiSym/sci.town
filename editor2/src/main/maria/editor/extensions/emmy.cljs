@@ -8,6 +8,7 @@
             [emmy.series]
             [emmy.structure]
             [emmy.modint]
+            [emmy.generic]
             [emmy.portal.css :refer [inject!] :rename {inject! inject-css!}]
             [emmy.viewer.css :refer [css-map]]
             [emmy.mafs]
@@ -16,7 +17,7 @@
             [yawn.view :as v]))
 
 (defn show-frozen [opts x]
-  (show opts (emmy.value/freeze x)))
+  (show opts (emmy.generic/freeze x)))
 
 (defn show-expression-of [opts x]
   (show opts (emmy.expression/expression-of x)))
@@ -25,7 +26,7 @@
   (v/x [:span.text-number (str x)]))
 
 (defn show-ratio [opts x]
-  (let [[_ n d] (emmy.value/freeze x)]
+  (let [[_ n d] (emmy.generic/freeze x)]
     #_(katex/show-katex :span (str "\\dfrac{" n "}{" d "}"))
     (v/x [:<>
           [:span.text-number n]

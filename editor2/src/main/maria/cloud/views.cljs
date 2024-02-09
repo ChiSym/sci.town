@@ -50,13 +50,13 @@
 (y/defview curriculum
   [{:as params :curriculum/keys [name]}]
   (let [{:as file
-         :keys [file/id
-                file/url]} (db/get [:curriculum/name name])
+         :keys [doc/id
+                doc/url]} (db/get [:curriculum/name name])
         file (u/use-promise #(when url
-                               (p/let [source (p/-> (u/fetch url)
+                                   (p/let [source (p/-> (u/fetch url)
                                                     (j/call :text))]
-                                 (db/transact! [[:db/add [:file/id id] :file/source source]])
-                                 (assoc file :file/source source)))
+                                          (db/transact! [[:db/add [:doc/id id] :doc/source source]])
+                                          (assoc file :doc/source source)))
                             [id])]
     [editor.core/editor params file]))
 
@@ -84,9 +84,9 @@
                      (str "https://"))
         file (u/use-promise #(p/let [source (p/-> (u/fetch url)
                                                   (j/call :text))
-                                     file {:file/id url
+                                     file {:doc/id url
                                            :http-text/url url
-                                           :file/source source}]
+                                           :doc/source source}]
                                (db/transact! [file])
                                file)
                             [url])]

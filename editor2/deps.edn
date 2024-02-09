@@ -30,8 +30,7 @@
         io.github.mhuebert/yawn {:git/sha "68285f6c132f26a2ff3cc2f7dffc3fe68c9856d9"}
 
         ;; emmy / clerk
-        io.github.mhuebert/emmy #_org.mentat/emmy {:git/url "https://github.com/mhuebert/emmy"
-                                                   :git/sha "f452bbb9714be25fa141a7e9a39c4e48d1164bf3"}
+        io.github.mentat-collective/emmy {:git/sha "13dda79d30e520c91951d32005be3ce819e35d4b"}
         io.github.probcomp/Gen.clj {:git/sha "be5c8b081078dff9078552e85f6eaab3b3dedce5"}
         org.mentat/emmy-viewers {:mvn/version "0.2.0"}
         io.github.nextjournal/clerk {:git/sha "d80187013d7b7b96db3d8b114b8d99f687170668"}
@@ -44,11 +43,11 @@
 
         }
  :aliases
- {:local {:extra-deps {io.github.probcomp/Gen.clj {:local/root "../../Gen.clj"}
-                       #_#_org.mentat/emmy {:local/root "../../emmy"}
+ {:local {:extra-deps {#_#_io.github.probcomp/Gen.clj {:local/root "../../Gen.clj"}
+                       io.github.mentat-collective/emmy {:local/root "../../emmy"}
                        #_#_io.github.babashka/sci {:local/root "../../sci"}
                        #_#_applied-science/js-interop {:local/root "../../js-interop"}
                        #_#_nextjournal/clojure-mode {:local/root "../../clojure-mode"}
                        #_#_io.github.mhuebert/yawn {:local/root "../../yawn"}
-                       io.github.mhuebert/re-db {:local/root "../../re-db"}}}
+                       #_#_io.github.mhuebert/re-db {:local/root "../../re-db"}}}
   :build {:extra-paths ["dev"]}}}

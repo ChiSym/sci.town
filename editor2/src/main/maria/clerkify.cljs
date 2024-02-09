@@ -23,8 +23,8 @@
                (file-saver/saveAs content "clerkified-maria.zip")))))
 
 (keymaps/register-commands!
-  {:file/save-as-clerk-project {:kind :prose
-                                :f    (fn [state dispatch view]
-                                        (download-clerkified-zip
-                                          (-> (j/get-in view [:state :title])
-                                              editor.doc/doc->clj)))}})
+  {:doc/save-as-clerk-project {:kind :prose
+                               :f (fn [state dispatch view]
+                                      (download-clerkified-zip
+                                        (-> (j/get-in view [:state :title])
+                                            editor.doc/doc->clj)))}})
