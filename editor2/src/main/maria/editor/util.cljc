@@ -119,7 +119,8 @@
            (re-find (if headings-only
                       #"\s*;+\s*#+\s*(.*)"
                       #"\s*;+[\s#]*(.*)"))
-           second))
+           second
+           some-str))
 
 (defn truncate-segmented [s n ellipsis]
   (let [segments (str/split s #"[\s\n]+")
