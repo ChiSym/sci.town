@@ -24,6 +24,7 @@
             [reagent.core :as reagent]
             [shadow.lazy :as lazy]))
 
+(def HICCUP-BY-DEFAULT true)
 
 (def COLL-PADDING 4)
 
@@ -365,15 +366,16 @@
                    (show-katex opts s))))
 
              (handles-keys #{:hiccup}
-               (fn [opts x]
-                 (when (and (instance? PersistentVector x)
-                            (keyword? (first x))
-                            ;; provides ^:vector [] as an escape-hatch
-                            ;; to prevent hiccup rendering. otherwise, treat
-                            ;; any vector whose first child is a keyword as hiccup.
-                            ;; (useful for demos, unsure if we should keep this behaviour)
-                            (not (:vector (meta x))))
-                   (v/x x))))
+               (if HICCUP-BY-DEFAULT
+                 (fn [opts x]
+                   (when (and (instance? PersistentVector x)
+                              (keyword? (first x))
+                              ;; provides ^:vector [] as an escape-hatch to prevent hiccup rendering
+                              (not (:vector (meta x))))
+                     (v/x x)))
+                 (fn [opts x]
+                   (when (:hiccup (meta x))
+                     (v/x x)))))
 
              (handles-keys #{:number
                              :symbol

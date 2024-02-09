@@ -141,7 +141,8 @@
       (intern-core 'clojure.core '[maria.editor.code.repl/doc
                                    maria.editor.code.repl/dir
                                    maria.editor.code.repl/await
-                                   maria.editor.code.repl/what-is])
+                                   maria.editor.code.repl/what-is
+                                   maria.editor.code.repl/html])
       (refer-all! '{cells.core user
                     maria.editor.code.repl user
                     shapes.core user})
