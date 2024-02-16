@@ -83,6 +83,9 @@
     "vh-sticky-table-header": "1.2.1",
     "w3c-keyname": "^2.2.6"
   },
+  "engines": {
+    "node": "18"
+  },
   "devDependencies": {
     "firebase-tools": "^13.1.0"
   }
