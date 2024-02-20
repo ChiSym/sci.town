@@ -88,7 +88,7 @@
   [state]
   (bp/shell "mkdir -p .firebase-local")
   (defonce _firebase-emulators
-           (child-process "firebase emulators:start --import .firebase-local"))
+           (child-process "yarn firebase emulators:start --import .firebase-local"))
   state)
 
 (defn copy-curriculum! {:shadow.build/stage :flush}
