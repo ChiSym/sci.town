@@ -44,10 +44,10 @@
         }
  :aliases
  {:local {:extra-deps {#_#_io.github.probcomp/Gen.clj {:local/root "../../Gen.clj"}
-                       io.github.mentat-collective/emmy {:local/root "../../emmy"}
+                       #_#_io.github.mentat-collective/emmy {:local/root "../../emmy"}
                        #_#_io.github.babashka/sci {:local/root "../../sci"}
                        #_#_applied-science/js-interop {:local/root "../../js-interop"}
                        #_#_nextjournal/clojure-mode {:local/root "../../clojure-mode"}
                        #_#_io.github.mhuebert/yawn {:local/root "../../yawn"}
-                       #_#_io.github.mhuebert/re-db {:local/root "../../re-db"}}}
+                       io.github.mhuebert/re-db {:local/root "../../re-db"}}}
   :build {:extra-paths ["dev"]}}}

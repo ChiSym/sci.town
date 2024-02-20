@@ -1,4 +1,7 @@
 {:deps true
+ :dev-http {8000 {:root "public"}
+            8001 {:root "public"
+                  :push-state/index "inspector.html"}}
  :builds
  {:editor
   {:target :browser
@@ -6,25 +9,30 @@
    :asset-path "/js"
    :build-hooks [(cljs-static.shadow/write-assets!
                    {:public-path "public"
-                    "/index.html" (build/index-html)})]
+                    "/index.html" (build/editor-html)})
+                 (cljs-static.shadow/write-assets!
+                   {:public-path "public"
+                    "/inspector.html" (build/inspector-html)})]
    :dev {:build-hooks [(build/tailwind-watch!)
                        (build/firebase-emulate!)
                        (build/copy-curriculum!)
-                       (build/browse! "http://localhost:4000/database/probcomp-caliban-default-rtdb/data")
-                       (build/browse! "http://localhost:8000")]}
+                       #_(build/browse! "http://localhost:4000/database/probcomp-caliban-default-rtdb/data")
+                       #_(build/browse! "http://localhost:8000")]}
    :release {:build-hooks [#_(shadow.cljs.build-report/hook {:output-to "public/build-report.html"})]}
-   :devtools {:http-root "public"
-              :http-port 8000
-              :preloads [yawn.view.refresh-preload]}
+   :devtools {:preloads [yawn.view.refresh-preload]}
    :module-loader true
-   :modules {:core {:init-fn maria.cloud.core/init}
+   :modules {:common {}
+             :editor {:init-fn maria.cloud.core/init
+                      :depends-on #{:common}}
+             :inspector {:init-fn sci.town.inspector/init
+                         :depends-on #{:common}}
              :landing {:entries [maria.cloud.pages.landing]
-                       :depends-on #{:core}}
+                       :depends-on #{:common}}
              :ext.katex {:entries [maria.editor.extensions.katex]
-                         :depends-on #{:core}}
+                         :depends-on #{:common}}
              :ext.reagent {:entries [maria.editor.extensions.reagent]
-                           :depends-on #{:core}}
+                           :depends-on #{:common}}
              :ext.emmy {:entries [maria.editor.extensions.emmy]
-                        :depends-on #{:core :ext.reagent :ext.katex}}
+                        :depends-on #{:common :ext.reagent :ext.katex}}
              :ext.gen {:entries [maria.editor.extensions.gen]
-                       :depends-on #{:core}}}}}}
+                       :depends-on #{:common}}}}}}
