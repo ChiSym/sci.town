@@ -23,11 +23,12 @@
 
 (def app
   (let [{:keys [static-root
-                static-fallback]} COMMAND-LINE-ARGS]
+                static-fallback]
+         :or {static-root "../public"
+              static-fallback "../public/inspector.html"}} COMMAND-LINE-ARGS]
        (doto (new Hono)
-             (.get "/" (fn [req] (.text req (str "Hello, world."))))
              (cond-> static-root
-                     (.user "*" (serveStatic {:root static-root})))
+                     (.use "*" (serveStatic {:root static-root})))
              (cond-> static-fallback
                      (.get "*" (serveStatic {:path static-fallback})))
              (.get "*" #(.text % "Nothing to see here, folks.")))))
