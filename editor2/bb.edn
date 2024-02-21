@@ -19,7 +19,6 @@
   css (shell "npx tailwindcss -i src/editor.css -o public/editor.css")
   release (do (run 'copy-curriculum)
               (shell "yarn shadow-cljs -A:build release editor")
-              (shell {:dir "../inspector"} "bb release")
               (run 'css))
 
   server (shell "yarn shadow-cljs -A:local server")

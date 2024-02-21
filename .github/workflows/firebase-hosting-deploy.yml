@@ -39,16 +39,16 @@ jobs:
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: 1.0.0
-      - name: bun deps
-        working-directory: ${{env.inspectorDir}}
-        run: bun install
 
-      - name: yarn deps
+      - name: install deps
         working-directory: ${{env.dir}}
-        run: yarn
+        run: bb deps
 
       - name: Build static site
         working-directory: ${{env.dir}}
+        run: bb release
+      - name: Build inspector
+        working-director: ${{env.inspectorDir}}
         run: bb release
 
       # PREVIEW deploys
