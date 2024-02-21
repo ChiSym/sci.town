@@ -34,6 +34,10 @@ jobs:
           bb: 0.9.162
           cli: 1.11.1.1347 # Clojure CLI based on tools.deps
           github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.0.0
       - name: yarn deps
         working-directory: ${{env.dir}}
         run: yarn
