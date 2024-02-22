@@ -11,7 +11,8 @@
 
   ;; create executable
   ;; https://bun.sh/docs/bundler/executables
-  release (do (shell "bun squint compile ./src/inspector/server.cljs")
+  compile (shell "bun squint compile")
+  release (do (run 'compile)
               (shell "bun build ./out/inspector/server.js --compile --hot --outfile ./out/server"))
   run-release (do (run 'release)
                   (shell "./out/server"))}}
