@@ -48,7 +48,7 @@ jobs:
         working-directory: ${{env.dir}}
         run: bb release
       - name: Build inspector
-        working-director: ${{env.inspectorDir}}
+        working-directory: ${{env.inspectorDir}}
         run: bb release
 
       # PREVIEW deploys
