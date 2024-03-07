@@ -1,5 +1,6 @@
 (ns inspector.proxy
-  "Proxy websocket messages from producers to inspectors")
+  "Proxy websocket messages from producers to inspectors"
+  (:require ["msgpack-lite" :as msgpack]))
 
 ;; https://bun.sh/guides/websocket/simple
 ;; https://bun.sh/guides/websocket/pubsub
@@ -12,8 +13,11 @@
 ;; to establish websocket connections
 (defn upgrade! [{:as req :keys [url]} server]
       ;; create a websocket connection, assigning a random id and mode
-      (let [id (swap! !counter inc)
-            mode (case (.-pathname (new js/URL url))
+      (let [URL (js/URL. url)
+            id (or (-> (js/URLSearchParams (.-search URL))
+                       (.get "id"))
+                   (swap! !counter inc))
+            mode (case (.-pathname URL)
                        ;; inspector clients should initialize websocket at /ws-inspector
                        "/ws-inspector" :inspector
                        ;; gen clients should initialize websocket at /ws-gen
@@ -27,10 +31,10 @@
 (defn websocket-handler [!server]
       (add-watch !producers :producers
                  (fn [_ _ _ value]
-                     (prn :producers-changed value)
-                     (.publish @!server :producers (js/JSON.stringify [:producers value]))))
+                     (prn :producers-changed value) 
+                     (.publish @!server :producers (msgpack/encode [:producers value]))))
       (let [send (fn [ws op message]
-                     (.send ws (js/JSON.stringify [op message])))]
+                     (.send ws (msgpack/encode [op message])))]
            {:maxPayloadLength (* 1024 1024 64)              ;; max message size 64MB
             :idleTimeout 120                                ;; seconds
             :backpressureLimit (* 1024 1024)                ;; 1MB
@@ -48,14 +52,14 @@
                                          (send ws :producers @!producers))
                             (prn :unknown-data data)))
 
-            :message (fn [{:as ws {:keys [id mode] :as data} :data} message]
+            :message (fn [{:as ws {:keys [id mode] :as data} :data} message] 
                          (case mode
                                ;; use bun's built-in publish/subscribe api, using the gen client's id
                                ;; as the channel name. By default, proxy all messages directly from
                                ;; gen clients to subscribed inspectors.
-                               :gen (.publish @!server id (js/JSON.stringify [id message])) ;; proxy message without touching it
+                               :gen (.publish @!server id message) ;; proxy message without touching it
 
-                               :inspector (let [[op & args] (js/JSON.parse message)]
+                               :inspector (let [[op & args] (msgpack/decode message)]
                                                (case op
                                                      :subscribe (.subscribe ws (first args))
                                                      :unsubscribe (.unsubscribe ws (first args))

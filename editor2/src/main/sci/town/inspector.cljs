@@ -6,7 +6,11 @@
             [re-db.reactive :as r]
             [yawn.hooks :as h]
             [yawn.root :as root]
-            [yawn.view :as v]))
+            [yawn.view :as v]
+            ["msgpack-lite" :as msgpack]
+            [promesa.core :as p]))
+
+(defonce session-id (str (random-uuid)))
 
 ;; a list of all messages received from the server
 (defonce !messages (r/atom ()))
@@ -22,7 +26,7 @@
   [!ws message]
   (let [{:keys [connected? ^js ws]} @!ws]
     (if connected?
-      (.send ws (js/JSON.stringify (clj->js message)))
+      (.send ws (msgpack/encode (clj->js message)))
       (swap! !ws update :to-send (fnil conj []) message))))
 
 (defn close
@@ -46,7 +50,7 @@
                                 (assoc :connected? true)
                                 (dissoc :to-send))))
                (doseq [message to-send]
-                 (.send ws (js/JSON.stringify (clj->js message)))))
+                 (.send ws (msgpack/encode (clj->js message)))))
 
             :onclose
             #(swap! !ws assoc :connected? false)
@@ -55,24 +59,26 @@
     !ws))
 
 (memo/once
-  (defn-memo $connect-gen-mock
-    "Returns a !ws pretending to be a provider"
-    []
-    (make-!ws "ws://localhost:3000/ws-gen")))
+ (defn-memo $connect-gen-mock
+   "Returns a !ws pretending to be a provider"
+   []
+   (make-!ws "ws://localhost:3000/ws-gen")))
 
 (memo/once
-  (defn-memo $connect
-    "Returns a !ws for this inspector instance"
-    [!producers !messages]
-    (make-!ws "ws://localhost:3000/ws-inspector"
-                 :on-message (j/fn [^js {:as e :keys [data]}]
-                                   (let [[op payload] (js/JSON.parse data)]
-                                     (case op
-                                       "producers"
-                                       (reset! !producers (js->clj payload))
-                                       (swap! !messages (comp #(take 100 %) conj)
-                                              {:id op
-                                               :data payload})))))))
+ (defn-memo $connect
+   "Returns a !ws for this inspector instance"
+   [!producers !messages]
+   (make-!ws "ws://localhost:3000/ws-inspector"
+             :on-message (j/fn [^js {:as e :keys [data]}]
+                           (p/let [abuf (.arrayBuffer data)] 
+                             (let [payload (msgpack/decode (js/Uint8Array. abuf))]
+                               (case (first payload)
+                                 "producers"
+                                 (reset! !producers (js->clj (second payload)))
+                                 (swap! !messages (comp #(take 100 %) conj)
+                                        (let [[_ id data] payload]
+                                          {:id id
+                                           :data data})))))))))
 
 (ui/defview gen-mock []
   (let [!message (h/use-state (str "Example data " (rand-int 1000)))
@@ -82,7 +88,7 @@
      [:form.contents
       {:on-submit (fn [^js e]
                     (.preventDefault e)
-                    (send !ws ["trace" @!message])
+                    (send !ws [:trace session-id @!message])
                     (reset! !message (str "Example data " (rand-int 1000))))}
       [:textarea.bg-zinc-700
        {:on-change (comp (partial reset! !message)
@@ -118,13 +124,14 @@
         [:div.inline-flex.bg-slate-300.rounded.divide-x-2.m-1.overflow-hidden
          [:div.flex.items-center.p-2.bg-slate-200.rounded-l "Processes:"]
          (doall (map (partial producer-checkbox {:!hidden !hidden
-                                                  :!ws !ws}) (keys @!producers)))]
-        (doall
+                                                 :!ws !ws}) (keys @!producers)))]
+        [:div.p-2.gap-2.flex.flex-col
+         (doall
           (for [{:keys [id data]} (->> @!messages
                                        (remove (comp @!hidden str :id)))]
             [:div.flex.flex-col
              [:div (str "#" id)]
-             (str data)]))]
+             (str data)]))]]
        [:div.flex.flex-col.gap-2.p-2.bg-zinc-800.text-white {:class "w-1/2 min-h-[100vh]"}
         [gen-mock]]]
       (str @!ws))))

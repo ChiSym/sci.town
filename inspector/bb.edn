@@ -12,6 +12,9 @@
   ;; create executable
   ;; https://bun.sh/docs/bundler/executables
   compile (shell "bun squint compile")
+
+  ;; this doesn't work yet - https://clojurians.slack.com/archives/C03U8L2NXNC/p1709824546867629
+  nrepl (shell "bun --bun squint nrepl-server :port 1888")
   release (do (run 'compile)
               (shell "bun build ./out/inspector/server.js --compile --hot --outfile ./out/server"))
   run-release (do (run 'release)
