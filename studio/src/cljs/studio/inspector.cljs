@@ -7,6 +7,7 @@
             [yawn.hooks :as h]
             [yawn.root :as root]
             [yawn.view :as v]
+            [maria.editor.icons :as icons]
             ["msgpack-lite" :as msgpack]
             [promesa.core :as p]))
 
@@ -70,7 +71,7 @@
    [!producers !messages]
    (make-!ws "ws://localhost:3000/ws-studio"
              :on-message (j/fn [^js {:as e :keys [data]}]
-                           (p/let [abuf (.arrayBuffer data)] 
+                           (p/let [abuf (.arrayBuffer data)]
                              (let [payload (msgpack/decode (js/Uint8Array. abuf))]
                                (case (first payload)
                                  "producers"
@@ -113,26 +114,53 @@
                                   (j/get-in [:target :checked]))
                  :checked (not (@!hidden id))}]])
 
+(defn file-buffer [^js file]
+  (let [reader (js/FileReader.)
+        p (js/Promise. (fn [resolve reject] 
+                         (j/!set reader :onload
+                                 #(resolve (js/Uint8Array. (.-result reader))))))]
+    (.readAsArrayBuffer reader file)
+    p))
+
 (ui/defview inspector []
   (let [!hidden (h/use-state #{})
         !ws ($connect !producers !messages)
         {:keys [ws connected?]} @!ws]
     (def WS !ws)
     (if connected?
-      [:div.flex
-       [:div {:class "w-1/2"}
-        [:div.inline-flex.bg-slate-300.rounded.divide-x-2.m-1.overflow-hidden
-         [:div.flex.items-center.p-2.bg-slate-200.rounded-l "Processes:"]
+      [:div.flex.flex-col.relative
+       {:class "min-h-[100vh]"}
+
+       [:div.inline-flex.m-1.overflow-hidden.gap-2
+        [:label.rounded.bg-slate-200.inline-flex.items-center.px-3.gap-2
+         [icons/upload "w-5 h-5"]
+         "Upload"
+         [:input
+          {:type "file"
+           :hidden true
+           :multiple true
+           :on-change (j/fn [^js {:keys [target]}]
+                        (p/let [messages (p/all 
+                                          (map #(p/let [abuf (file-buffer %) 
+                                                        data (msgpack/decode abuf)]
+                                                  (js/console.log "msgpack/decoded" data)
+                                                  {:id "local-file"
+                                                   :data data})
+                                               (.. target -files)))]
+                          (swap! !messages into messages)))}]]
+        [:div.flex.items-center.p-2.bg-slate-200.rounded-l.divide-x-2.bg-slate-300.rounded
+         "Processes:"
          (doall (map (partial producer-checkbox {:!hidden !hidden
-                                                 :!ws !ws}) (keys @!producers)))]
-        [:div.p-2.gap-2.flex.flex-col
-         (doall
-          (for [{:keys [id data]} (->> @!messages
-                                       (remove (comp @!hidden str :id)))]
-            [:div.flex.flex-col
-             [:div (str "#" id)]
-             (str data)]))]]
-       [:div.flex.flex-col.gap-2.p-2.bg-zinc-800.text-white {:class "w-1/2 min-h-[100vh]"}
+                                                 :!ws !ws}) (keys @!producers)))]]
+
+       [:div.p-2.gap-2.flex.flex-col
+        (doall
+         (for [{:keys [id data]} (->> @!messages
+                                      (remove (comp @!hidden str :id)))]
+           [:div.flex.flex-col
+            [:div (str "#" id)]
+            (str data)]))]
+       [:div.absolute.flex.flex-col.gap-2.p-2.bg-zinc-800.text-white.bottom-0.right-0.m-1.rounded-lg
         [gen-mock]]]
       (str @!ws))))
 
