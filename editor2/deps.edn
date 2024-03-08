@@ -37,6 +37,8 @@
         io.github.nextjournal/clerk.render {:git/url "https://github.com/nextjournal/clerk"
                                             :git/sha "d80187013d7b7b96db3d8b114b8d99f687170668"
                                             :deps/root "render"}
+        
+        dev.gen/studio {:local/root "../studio"}
 
         ;; experimental
         ;io.github.squint-cljs/cherry {:git/sha "88eb3ce561c1ff271c316e9ac3d672f01e39d1a2"}

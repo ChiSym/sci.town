@@ -1,5 +1,10 @@
 module.exports = {
-    content: ["./public/editor/js/*.js", "./src/**/*", "./public/editor/index.html", "public/inspector/index.html"],
+    content: [
+        "./public/editor/js/*.js",
+        "./src/**/*",
+        "../studio/src/**/*",
+        "./public/index.html",
+        "./public/studio.html"],
     theme: {
         extend: {
             colors: {

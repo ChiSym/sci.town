@@ -1,18 +1,18 @@
 {:deps true
  :dev-http {8000 {:root "public"}
             8001 {:root "public"
-                  :push-state/index "inspector.html"}}
+                  :push-state/index "studio.html"}}
  :builds
  {:editor
   {:target :browser
    :output-dir "public/js"
    :asset-path "/js"
    :build-hooks [(cljs-static.shadow/write-assets!
-                   {:public-path "public"
-                    "/index.html" (build/editor-html)})
+                  {:public-path "public"
+                   "/index.html" (build/editor-html)})
                  (cljs-static.shadow/write-assets!
-                   {:public-path "public"
-                    "/inspector.html" (build/inspector-html)})]
+                  {:public-path "public"
+                   "/studio.html" (build/studio-html)})]
    :dev {:build-hooks [(build/tailwind-watch!)
                        (build/firebase-emulate!)
                        (build/copy-curriculum!)
@@ -24,8 +24,8 @@
    :modules {:common {}
              :editor {:init-fn maria.cloud.core/init
                       :depends-on #{:common}}
-             :inspector {:init-fn sci.town.inspector/init
-                         :depends-on #{:common}}
+             :studio {:init-fn studio.inspector/init
+                      :depends-on #{:common}}
              :landing {:entries [maria.cloud.pages.landing]
                        :depends-on #{:common}}
              :ext.katex {:entries [maria.editor.extensions.katex]

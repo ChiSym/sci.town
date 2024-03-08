@@ -1,4 +1,4 @@
-(ns sci.town.inspector
+(ns studio.inspector
   (:require [applied-science.js-interop :as j]
             [maria.ui :as ui]
             [re-db.hooks :as rh]
@@ -66,9 +66,9 @@
 
 (memo/once
  (defn-memo $connect
-   "Returns a !ws for this inspector instance"
+   "Returns a !ws for this studio instance"
    [!producers !messages]
-   (make-!ws "ws://localhost:3000/ws-inspector"
+   (make-!ws "ws://localhost:3000/ws-studio"
              :on-message (j/fn [^js {:as e :keys [data]}]
                            (p/let [abuf (.arrayBuffer data)] 
                              (let [payload (msgpack/decode (js/Uint8Array. abuf))]

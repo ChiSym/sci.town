@@ -4,15 +4,15 @@
  {dev (run '-dev {:parallel true})
 
   -dev {:depends [dev:editor
-                  dev:inspector]}
+                  dev:studio]}
 
   deps (do (shell "yarn")
-           (shell {:dir "../inspector"} "bun install"))
+           (shell {:dir "../studio"} "bun install"))
 
   dev:editor (shell "yarn shadow-cljs -A:build clj-run build/watch")
   ;; use dev-local to test local versions of libs, as specified in deps.edn
   dev:local (shell "yarn shadow-cljs -A:local:build clj-run build/watch")
-  dev:inspector (shell {:dir "../inspector"} "bb dev")
+  dev:studio (shell {:dir "../studio"} "bb dev")
   copy-curriculum (do
                     (shell "mkdir -p public/curriculum")
                     (shell "rsync -av src/main/maria/curriculum/ public/curriculum"))

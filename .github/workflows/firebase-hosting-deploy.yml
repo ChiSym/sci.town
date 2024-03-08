@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       dir: './editor2'
-      inspectorDir: './inspector'
+      studioDir: './studio'
     steps:
       - uses: actions/checkout@v3
       - name: Reconfigure git to use HTTP authentication
@@ -47,8 +47,8 @@ jobs:
       - name: Build static site
         working-directory: ${{env.dir}}
         run: bb release
-      - name: Build inspector
-        working-directory: ${{env.inspectorDir}}
+      - name: Build studio
+        working-directory: ${{env.studioDir}}
         run: bb release
 
       # PREVIEW deploys

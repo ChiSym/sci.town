@@ -1,13 +1,13 @@
-(ns inspector.server
+(ns studio.server
   (:require ["hono" :refer [Hono]]
             ["hono/bun" :refer [serveStatic]]
             ["util" :refer [parseArgs]]
             ["msgpack-lite" :as msgpack]
-            [inspector.proxy :as proxy]))
+            [studio.proxy :as proxy]))
 
 (def DEFAULT-OPTIONS {:port 3000
                       :static-root "../editor2/public"
-                      :static-fallback "../editor2/public/inspector.html"})
+                      :static-fallback "../editor2/public/studio.html"})
 
 (def COMMAND-LINE-OPTIONS
   ;; parse argv using https://bun.sh/guides/process/argv
@@ -59,4 +59,4 @@
                      (.fetch app req server)))
           :websocket (proxy/websocket-handler !server)}))
 
-(println "Inspector running on port" (get-port))
+(println "studio running on port" (get-port))

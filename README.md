@@ -14,7 +14,7 @@ In `editor2`:
 
 This will compile the project and start two dev servers:
 - http://localhost:8000 for the editor
-- http://localhost:3000 for the inspector
+- http://localhost:3000 for the studio
 
 The editor's dev server uses a local emulator for the Firebase database.
 

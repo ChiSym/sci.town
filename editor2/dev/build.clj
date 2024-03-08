@@ -69,7 +69,7 @@
                              {:src (shadow/module-path :editor :common)}
                              {:src (shadow/module-path :editor :editor)}]}))
 
-(defn inspector-html []
+(defn studio-html []
   (page/root "sci.town"
              {:meta {:viewport "width=device-width, initial-scale=1"}
               :styles [{:href (assets/path "/editor.css")}]
@@ -77,7 +77,7 @@
               :props/html {:class "bg-neutral-100"}
               :body [:div#sci-town]
               :scripts/body [{:src (shadow/module-path :editor :common)}
-                             {:src (shadow/module-path :editor :inspector)}]}))
+                             {:src (shadow/module-path :editor :studio)}]}))
 
 (def child-process
   "Run a shell command which terminates with the current one, and streams output to stdout"

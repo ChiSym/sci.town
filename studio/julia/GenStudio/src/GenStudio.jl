@@ -4,28 +4,27 @@ using UUIDs
 using MsgPack
 
 # Let's create a simple client struct:
-struct InspectorClient
+struct StudioClient
     host::String
     serializer::Function
     session_id::String
 end
 
-function InspectorClient(host)
+function StudioClient(host)
     serializer = pack
     session_id = string(uuid4())
-    return InspectorClient(host, serializer, session_id)
+    return StudioClient(host, serializer, session_id)
 end
 
-function inspect(client::InspectorClient, msg)
+function inspect(client::StudioClient, msg)
     payload = client.serializer(["log", client.session_id, msg])
     url = client.host * "/log/" * client.session_id
     response = HTTP.post(url, body=payload)
 end
 
 
-# INSPECTOR_SERVER = "http://localhost:3000"
-# client = InspectorClient(INSPECTOR_SERVER)
-
+# STUDIO_HOST = "http://localhost:3000"
+# client = StudioClient(STUDIO_HOST)
 # inspect(client, "Hello, world")
 
 
