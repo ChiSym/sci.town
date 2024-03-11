@@ -4,10 +4,19 @@ A multiplayer notebook for exploratory learning and teaching in probabilistic co
 
 ### Development
 
-- install dependencies: `yarn`
+Prerequisites:
+ - [babashka](https://babashka.org)
+ - [bun](https://bun.sh/docs/installation)
+
+In `editor2`:
+- install dependencies: `bb deps`
 - start the dev server: `bb dev`
 
-The dev server uses a local emulator for the Firebase database, so you won't see production data here.
+This will compile the project and start two dev servers:
+- http://localhost:8000 for the editor
+- http://localhost:3000 for the studio
+
+The editor's dev server uses a local emulator for the Firebase database.
 
 ## Adding additional 3rd party libraries
 

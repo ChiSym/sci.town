@@ -1,0 +1,21 @@
+{:deps {}
+ :tasks
+ {;; compile and watch server
+  dev (run '-dev {:parallel true})
+  -dev {:depends [dev:watch dev:hot]}
+  dev:watch (shell "bun squint watch")
+  dev:hot (do (Thread/sleep 1000)                           ;; wait for compilation
+              (shell (->> ["bun --hot out/studio/server.js" *command-line-args*]
+                       flatten
+                       (clojure.string/join " "))))
+
+  ;; create executable
+  ;; https://bun.sh/docs/bundler/executables
+  compile (shell "bun squint compile")
+
+  ;; this doesn't work yet - https://clojurians.slack.com/archives/C03U8L2NXNC/p1709824546867629
+  nrepl (shell "bun --bun squint nrepl-server :port 1888")
+  release (do (run 'compile)
+              (shell "bun build ./out/studio/server.js --compile --hot --outfile ./out/server"))
+  run-release (do (run 'release)
+                  (shell "./out/server"))}}

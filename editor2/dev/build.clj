@@ -49,7 +49,7 @@
             :file/provider :file.provider/curriculum})
         (fs/list-dir (fs/file "src/main/maria/curriculum"))))
 
-(defn index-html []
+(defn editor-html []
   (page/root "sci.town"
              {:meta {:viewport "width=device-width, initial-scale=1"}
               :styles [{:href (assets/path "/editor.css")}]
@@ -66,7 +66,18 @@
                                            (merge {:db/id :maria.cloud/env
                                                    :git/sha (current-sha)}
                                                   (read-string (slurp (io/resource "config.public.edn")))))}
-                             {:src (shadow/module-path :editor :core)}]}))
+                             {:src (shadow/module-path :editor :common)}
+                             {:src (shadow/module-path :editor :editor)}]}))
+
+(defn studio-html []
+  (page/root "sci.town"
+             {:meta {:viewport "width=device-width, initial-scale=1"}
+              :styles [{:href (assets/path "/editor.css")}]
+              :scripts/head [{:src "https://polyfill.io/v3/polyfill.min.js?version=3.111.0&features=URLSearchParams%2CURL"}]
+              :props/html {:class "bg-neutral-100"}
+              :body [:div#sci-town]
+              :scripts/body [{:src (shadow/module-path :editor :common)}
+                             {:src (shadow/module-path :editor :studio)}]}))
 
 (def child-process
   "Run a shell command which terminates with the current one, and streams output to stdout"

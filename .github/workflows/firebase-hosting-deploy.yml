@@ -5,6 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       dir: './editor2'
+      studioDir: './studio'
     steps:
       - uses: actions/checkout@v3
       - name: Reconfigure git to use HTTP authentication
@@ -34,12 +35,20 @@ jobs:
           bb: 0.9.162
           cli: 1.11.1.1347 # Clojure CLI based on tools.deps
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: yarn deps
+      - name: install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.0.0
+
+      - name: install deps
         working-directory: ${{env.dir}}
-        run: yarn
+        run: bb deps
 
       - name: Build static site
         working-directory: ${{env.dir}}
+        run: bb release
+      - name: Build studio
+        working-directory: ${{env.studioDir}}
         run: bb release
 
       # PREVIEW deploys

@@ -1,11 +1,18 @@
 {:deps {}
  :requires ([clojure.java.browse :as browse])
  :tasks
- {dev (shell "yarn shadow-cljs -A:build clj-run build/watch")
-  ;; use dev-local to test local versions of libs, as specified in deps.edn
-  dev-local (shell "yarn shadow-cljs -A:local:build clj-run build/watch")
+ {dev (run '-dev {:parallel true})
 
-  server (shell "yarn shadow-cljs -A:local server")
+  -dev {:depends [dev:editor
+                  dev:studio]}
+
+  deps (do (shell "yarn")
+           (shell {:dir "../studio"} "bun install"))
+
+  dev:editor (shell "yarn shadow-cljs -A:build clj-run build/watch")
+  ;; use dev-local to test local versions of libs, as specified in deps.edn
+  dev:local (shell "yarn shadow-cljs -A:local:build clj-run build/watch")
+  dev:studio (shell {:dir "../studio"} "bb dev")
   copy-curriculum (do
                     (shell "mkdir -p public/curriculum")
                     (shell "rsync -av src/main/maria/curriculum/ public/curriculum"))
@@ -13,4 +20,6 @@
   release (do (run 'copy-curriculum)
               (shell "yarn shadow-cljs -A:build release editor")
               (run 'css))
+
+  server (shell "yarn shadow-cljs -A:local server")
   debug (shell "yarn shadow-cljs release editor --debug")}}
