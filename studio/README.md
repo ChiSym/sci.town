@@ -17,6 +17,13 @@ A workflow might look like:
 In the `../editor2` directory, run `bb deps` and then `bb dev` to compile and run Studio.
 The server is in this directory (implemented in Bun) and the viewer is part of the `editor2` cljs build.
 
+To develop locally with another Julia project:
+
+```jl 
+# in the other project 
+Pkg.dev("XXXXXXXX/sci.town/studio-sdk/julia/GenStudio")tw
+```
+
 ## Release
 
 To create an executable:

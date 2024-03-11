@@ -1,8 +1,11 @@
 
+
+
+module GenStudio
+
 using HTTP
 using UUIDs
 using MsgPack
-
 # Let's create a simple client struct:
 struct StudioClient
     host::String
@@ -11,8 +14,8 @@ struct StudioClient
 end
 
 function StudioClient(host)
-    serializer = pack
-    session_id = string(uuid4())
+    serializer = MsgPack.pack
+    session_id = string(UUIDs.uuid4())
     return StudioClient(host, serializer, session_id)
 end
 
@@ -22,11 +25,18 @@ function inspect(client::StudioClient, msg)
     response = HTTP.post(url, body=payload)
 end
 
+function(client::StudioClient)(msg) 
+    inspect(client, msg)
+end
 
-# STUDIO_HOST = "http://localhost:3000"
-# client = StudioClient(STUDIO_HOST)
-# inspect(client, "Hello, world")
+end
 
+
+#= Usage
+using GenStudio.GenStudio
+studio = GenStudio.StudioClient("http://localhost:3000")
+studio("foo")
+=#
 
 # TODO 
 # - spawn server
